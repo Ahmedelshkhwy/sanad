@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { Suspense } from "react";
 import { NAV } from "@/lib/nav";
-import { buttonClass } from "@/components/ui/Button";
+import { LoginLink, UserMenu } from "@/components/UserMenu";
 
 export function SiteHeader() {
   return (
@@ -23,9 +24,9 @@ export function SiteHeader() {
           </ul>
         </nav>
         <div className="ms-auto flex items-center gap-2 md:ms-0">
-          <Link href="/login" className={buttonClass("ghost", "!min-h-10 !px-4 text-sm")}>
-            دخول
-          </Link>
+          <Suspense fallback={<LoginLink />}>
+            <UserMenu />
+          </Suspense>
           <ThemeToggle />
         </div>
       </div>
