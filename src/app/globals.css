@@ -1,26 +1,124 @@
 @import "tailwindcss";
 
+/* سَنَد design system. Gold marks interaction only, red marks emergencies only. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --paper: #f6f8f3;
+  --surface: #fdfefb;
+  --ink: #12211b;
+  --muted: #53655c;
+  --line: #d8e1d8;
+  --green: #0e4d38;
+  --green-2: #1e7a56;
+  --mint: #e2eee5;
+  --mint-2: #cfe3d6;
+  --on-green: #ffffff;
+  --sun: #d99530;
+  --sun-soft: #f7e7c8;
+  --urgent: #b42318;
+  --urgent-soft: #fbe4e0;
+  --wa: #1f8f55;
+  --shadow: 0 1px 2px rgba(14, 77, 56, 0.06), 0 12px 32px -18px rgba(14, 77, 56, 0.28);
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  :root:not([data-theme="light"]) {
+    --paper: #0c1612;
+    --surface: #12201a;
+    --ink: #e6efe9;
+    --muted: #9db1a6;
+    --line: #23362e;
+    --green: #74d1a2;
+    --green-2: #4db083;
+    --mint: #16302a;
+    --mint-2: #1d3b32;
+    --on-green: #0c1612;
+    --sun: #f0b455;
+    --sun-soft: #3a2e17;
+    --urgent: #f28a76;
+    --urgent-soft: #3a1d18;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 32px -18px rgba(0, 0, 0, 0.6);
+    color-scheme: dark;
   }
 }
 
+:root[data-theme="dark"] {
+  --paper: #0c1612;
+  --surface: #12201a;
+  --ink: #e6efe9;
+  --muted: #9db1a6;
+  --line: #23362e;
+  --green: #74d1a2;
+  --green-2: #4db083;
+  --mint: #16302a;
+  --mint-2: #1d3b32;
+  --on-green: #0c1612;
+  --sun: #f0b455;
+  --sun-soft: #3a2e17;
+  --urgent: #f28a76;
+  --urgent-soft: #3a1d18;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 32px -18px rgba(0, 0, 0, 0.6);
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-green: var(--green);
+  --color-green-2: var(--green-2);
+  --color-mint: var(--mint);
+  --color-mint-2: var(--mint-2);
+  --color-on-green: var(--on-green);
+  --color-sun: var(--sun);
+  --color-sun-soft: var(--sun-soft);
+  --color-urgent: var(--urgent);
+  --color-urgent-soft: var(--urgent-soft);
+  --color-wa: var(--wa);
+  --font-display: var(--font-reem-kufi), "Segoe UI", Tahoma, sans-serif;
+  --font-sans: var(--font-readex), "Segoe UI", Tahoma, "Noto Sans Arabic", sans-serif;
+  --shadow-card: var(--shadow);
+  --ease-out-soft: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+html {
+  scroll-padding-top: 84px;
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  line-height: 1.85;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Arabic is a connected script: never letter-space it */
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  line-height: 1.4;
+  letter-spacing: 0;
+  word-spacing: 0.14em;
+  text-wrap: balance;
+}
+
+:focus-visible {
+  outline: 3px solid var(--sun);
+  outline-offset: 3px;
+  border-radius: 8px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
