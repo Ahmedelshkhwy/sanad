@@ -1,5 +1,6 @@
 import "server-only";
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
 export type Role = "user" | "pharmacist" | "admin";
@@ -16,6 +17,8 @@ export type CurrentUser = {
 
 /** The signed-in user, or null. Verifies the token (getClaims) before trusting it. */
 export async function getCurrentUser(): Promise<CurrentUser | null> {
+  // the session check reads the clock; mark this as request-time work first
+  await connection();
   const supabase = await createClient();
   const { data } = await supabase.auth.getClaims();
   const claims = data?.claims;
