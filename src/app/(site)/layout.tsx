@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { MobileDock } from "@/components/MobileDock";
@@ -10,7 +11,9 @@ export default function SiteLayout({ children }: LayoutProps<"/">) {
         {children}
       </main>
       <SiteFooter />
-      <MobileDock />
+      <Suspense>
+        <MobileDock />
+      </Suspense>
     </>
   );
 }
