@@ -1,3 +1,4 @@
+import { after } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { runAssistant, type AssistantEvent, type AssistantResult } from "@/lib/assistant/engine";
@@ -8,6 +9,10 @@ const body = z.object({
   session: z.string().regex(/^[a-z0-9]{8,40}$/i),
   followup: z.boolean().optional().default(false),
 });
+
+export const maxDuration = 60;
+
+const FAIL_TEXT = "حصلت مشكلة ومقدرتش أرد دلوقتي. جرّب تاني بعد شوية، وفي الطوارئ كلّم 123.";
 
 const ALERT_TITLE: Record<string, string> = {
   urgent: "[طارئ] سؤال فيه علامات خطورة",
@@ -29,31 +34,14 @@ export async function POST(request: Request) {
   const { data: claims } = await supabase.auth.getClaims();
   const userId = claims?.claims?.sub ?? null;
 
-  const encoder = new TextEncoder();
-  const stream = new ReadableStream<Uint8Array>({
-    async start(controller) {
-      const send = (e: AssistantEvent) => controller.enqueue(encoder.encode(JSON.stringify(e) + "\n"));
-      const gen = runAssistant({ question, followup, userId, supabase });
-      let result: AssistantResult | undefined;
-      try {
-        for (;;) {
-          const step = await gen.next();
-          if (step.done) {
-            result = step.value;
-            break;
-          }
-          send(step.value);
-        }
-      } catch {
-        send({ t: "meta", kind: "handoff", needsPharmacist: true });
-        send({ t: "replace", text: "حصلت مشكلة ومقدرتش أرد دلوقتي. جرّب تاني بعد شوية، وفي الطوارئ كلّم 123." });
-        send({ t: "done" });
-      } finally {
-        controller.close();
-      }
-      if (!result) return;
-
-      await supabase.rpc("log_assistant", {
+  // Serverless platforms may stop the function once the response ends, so the log and the
+  // alert run in after(), which the platform keeps alive until it finishes.
+  let finish: (r: AssistantResult | undefined) => void = () => {};
+  const finished = new Promise<AssistantResult | undefined>((resolve) => (finish = resolve));
+  after(async () => {
+    const result = await finished;
+    if (!result) return;
+    await supabase.rpc("log_assistant", {
         p_session: session,
         p_question: question,
         p_mode: result.kind,
@@ -69,6 +57,32 @@ export async function POST(request: Request) {
         await sendTelegram(
           `${ALERT_TITLE[alertKey]}\n\n${question}${result.reason ? `\n\nالسبب: ${result.reason}` : ""}\nالوقت: ${cairoTime()}${userId ? "\n(مستخدم مسجّل)" : ""}`,
         );
+      }
+  });
+
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      const send = (e: AssistantEvent) => controller.enqueue(encoder.encode(JSON.stringify(e) + "\n"));
+      const gen = runAssistant({ question, followup, userId, supabase });
+      let result: AssistantResult | undefined;
+      try {
+        for (;;) {
+          const step = await gen.next();
+          if (step.done) {
+            result = step.value;
+            break;
+          }
+          send(step.value);
+        }
+      } catch (e) {
+        result = { kind: "handoff", text: FAIL_TEXT, ref: null, similarity: null, needsPharmacist: true, reason: `خطأ: ${(e as Error).message}` };
+        send({ t: "meta", kind: "handoff", needsPharmacist: true });
+        send({ t: "replace", text: FAIL_TEXT });
+        send({ t: "done" });
+      } finally {
+        controller.close();
+        finish(result);
       }
     },
   });
