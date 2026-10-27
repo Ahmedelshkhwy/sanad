@@ -1,9 +1,14 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { EMERGENCY_NUMBER } from "@/lib/nav";
 import { buttonClass } from "@/components/ui/Button";
 
 /** Phone-only quick access: ask the assistant, find a medicine, call emergency. */
 export function MobileDock() {
+  // on the assistant page the dock would cover the chat input
+  if (usePathname().startsWith("/assistant")) return null;
   return (
     <nav
       aria-label="وصول سريع"

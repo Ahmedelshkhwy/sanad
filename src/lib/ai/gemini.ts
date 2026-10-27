@@ -3,6 +3,7 @@ import { AiUnavailableError, type AiProvider } from "./provider";
 
 const API = "https://generativelanguage.googleapis.com/v1beta";
 export const EMBED_DIMS = 768;
+const FIRST_BYTE_MS = 8000;
 
 function key() {
   const k = process.env.GEMINI_API_KEY?.trim();
@@ -11,7 +12,7 @@ function key() {
 }
 
 function chatModels() {
-  return (process.env.GEMINI_CHAT_MODELS || "gemini-3.1-flash-lite,gemini-3.5-flash")
+  return (process.env.GEMINI_CHAT_MODELS || "gemini-3.1-flash-lite,gemini-3.7-flash,gemini-3.5-flash")
     .split(",")
     .map((m) => m.trim())
     .filter(Boolean);
@@ -75,16 +76,31 @@ export const gemini: AiProvider = {
     });
     let lastError = "no model configured";
     for (const model of chatModels()) {
+      // a busy model can sit on the request for 20+ seconds: give up on it if it hasn't started answering
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), FIRST_BYTE_MS);
       const res = await fetch(`${API}/models/${model}:streamGenerateContent?alt=sse`, {
         method: "POST",
         headers: { "content-type": "application/json", "x-goog-api-key": key() },
         body,
-        signal: AbortSignal.timeout(30_000),
+        signal: controller.signal,
       }).catch((e: Error) => ({ ok: false, status: 0, body: null, statusText: e.message }) as const);
       if (res.ok && res.body) {
-        yield* readSse(res.body);
-        return;
+        const chunks = readSse(res.body)[Symbol.asyncIterator]();
+        const first = await chunks.next().catch(() => null); // aborting the controller rejects this read
+        clearTimeout(timer);
+        if (first && !first.done) {
+          yield first.value;
+          for (;;) {
+            const next = await chunks.next();
+            if (next.done) return;
+            yield next.value;
+          }
+        }
+        lastError = `${model} no text in ${FIRST_BYTE_MS}ms`;
+        continue;
       }
+      clearTimeout(timer);
       // 503 (busy) and 429 (quota) are common on the free tier: try the next model
       lastError = `${model} ${res.status}`;
     }
