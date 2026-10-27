@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { LoginForm } from "./LoginForm";
+import { LoginChooser } from "./LoginChooser";
 
 export const metadata: Metadata = { title: "الدخول" };
 
@@ -12,7 +12,7 @@ export default function LoginPage() {
         <p className="text-muted">عشان تسجّل ملفك الصحي، وتتابع طلباتك، وتشارك في المجتمع.</p>
       </div>
       <Suspense>
-        <LoginForm />
+        <LoginChooser />
       </Suspense>
     </section>
   );

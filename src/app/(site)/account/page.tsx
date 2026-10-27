@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { requireUser } from "@/lib/auth";
 import { AccountForm } from "./AccountForm";
+import { PinForm } from "./PinForm";
 import { Icon, type IconName } from "@/components/Icon";
 import { PageHeader } from "@/components/ui/Field";
 import { buttonClass } from "@/components/ui/Button";
@@ -44,12 +45,24 @@ async function Account() {
         <h2 id="account-title" className="text-xl font-semibold">
           بياناتك
         </h2>
-        {user.email && (
+        {user.phone ? (
           <p className="text-sm text-muted">
-            الإيميل: <span dir="ltr">{user.email}</span>
+            رقم الموبايل: <span dir="ltr">+{user.phone}</span>
           </p>
+        ) : (
+          user.email && (
+            <p className="text-sm text-muted">
+              الإيميل: <span dir="ltr">{user.email}</span>
+            </p>
+          )
         )}
         <AccountForm displayName={user.displayName} pseudonym={user.pseudonym ?? ""} area={user.area ?? ""} />
+        {user.phone && (
+          <div className="grid gap-3 border-t border-line pt-5">
+            <h3 className="font-semibold">الرقم السري</h3>
+            <PinForm />
+          </div>
+        )}
       </section>
     </div>
   );

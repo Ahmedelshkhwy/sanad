@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireStaff } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { formatDay } from "@/lib/format";
+import { ResetPin } from "./ResetPin";
 
 export const metadata: Metadata = { title: "الحسابات" };
 
@@ -23,7 +24,7 @@ async function setRole(id: string, form: FormData) {
 async function Users() {
   const me = await requireStaff("/admin/users");
   const supabase = await createClient();
-  const { data } = await supabase.from("profiles").select("id, display_name, pseudonym, area, role, created_at").order("created_at", { ascending: false }).limit(200);
+  const { data } = await supabase.from("profiles").select("id, display_name, pseudonym, area, role, created_at, phone").order("created_at", { ascending: false }).limit(200);
   return (
     <ul className="grid gap-2">
       {(data ?? []).map((u) => (
@@ -32,6 +33,12 @@ async function Users() {
           <span className="text-sm text-muted">
             {u.area || "—"} · من {formatDay(u.created_at)}
           </span>
+          {u.phone && (
+            <span className="text-sm text-muted" dir="ltr">
+              +{u.phone}
+            </span>
+          )}
+          {me.role === "admin" && u.phone && <ResetPin userId={u.id} />}
           {me.role === "admin" && me.id !== u.id ? (
             <form action={setRole.bind(null, u.id)} className="ms-auto flex gap-2">
               <select name="role" defaultValue={u.role} aria-label="الدور" className="rounded-full border border-line bg-surface px-3 py-1 text-sm">
