@@ -2,13 +2,15 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { gemini } from "@/lib/ai/gemini";
 import type { AiProvider } from "@/lib/ai/provider";
-import { buildPrompt, CONTROL_RE, type HealthContext, type KbMatch, type Mode } from "./prompt";
+import { buildPrompt, CONTROL_RE, type HealthContext, type KbMatch, type Mode, type RefMatch } from "./prompt";
 import { findPharmacistHint, findUrgent } from "./risk";
 
 export const HANDOFF_TEXT = "أمورك طيبة؟ كلّم الصيدلي على واتساب، أو ابعت رقمك وهيتواصل معاك.";
 export const URGENT_TEXT = "ده ممكن يكون حالة طارئة. متستناش رد هنا: كلّم الإسعاف على 123 أو روح أقرب مستشفى، وخلّي حد يفضل جنبك.";
 export const AI_SOURCE = "ردّ من الذكاء الاصطناعي، مش من إجابات الصيدلي";
+export const AI_REF_SOURCE = "ردّ من الذكاء الاصطناعي بالاستعانة باستشارات أطباء منشورة، مش من إجابات الصيدلي";
 const EXACT = 0.95;
+const REF_MIN = Number(process.env.REF_MIN_SIMILARITY ?? 0.85);
 
 export type Kind = "approved" | "clarify" | "general" | "handoff" | "urgent";
 
@@ -47,11 +49,16 @@ async function loadHealth(supabase: SupabaseClient, userId: string | null): Prom
   };
 }
 
-async function findMatches(ai: AiProvider, supabase: SupabaseClient, question: string): Promise<KbMatch[]> {
+/** One embedding, two searches: the pharmacist's approved answers and the published consultations. */
+async function findMatches(ai: AiProvider, supabase: SupabaseClient, question: string): Promise<{ kb: KbMatch[]; consultations: RefMatch[] }> {
   const [vector] = await ai.embed([question]);
-  const { data, error } = await supabase.rpc("match_kb", { query_embedding: JSON.stringify(vector), match_count: 3 });
-  if (error) throw new Error(error.message);
-  return (data ?? []) as KbMatch[];
+  const query_embedding = JSON.stringify(vector);
+  const [kb, ref] = await Promise.all([
+    supabase.rpc("match_kb", { query_embedding, match_count: 3 }),
+    supabase.rpc("match_ref", { query_embedding, match_count: 2 }),
+  ]);
+  if (kb.error) throw new Error(kb.error.message);
+  return { kb: (kb.data ?? []) as KbMatch[], consultations: ref.error ? [] : ((ref.data ?? []) as RefMatch[]) };
 }
 
 /**
@@ -80,8 +87,12 @@ export async function* runAssistant(input: {
 
   const notes: string[] = [];
   let refs: KbMatch[] = [];
+  let consultations: RefMatch[] = [];
   try {
-    refs = (await findMatches(ai, supabase, question)).filter((r) => r.similarity >= 0.6);
+    const found = await findMatches(ai, supabase, question);
+    refs = found.kb.filter((r) => r.similarity >= 0.6);
+    consultations = found.consultations.filter((c) => c.similarity >= REF_MIN);
+    if (consultations.length) notes.push(`استشارات: ${consultations.map((c) => `${c.id} (${c.similarity.toFixed(2)})`).join("، ")}`);
   } catch (e) {
     notes.push(`البحث فشل: ${(e as Error).message}`);
   }
@@ -89,6 +100,7 @@ export async function* runAssistant(input: {
   const prompt = buildPrompt({
     question,
     refs,
+    consultations,
     health,
     allowClarify: !input.followup,
     allowGeneral,
@@ -128,7 +140,7 @@ export async function* runAssistant(input: {
           kind,
           needsPharmacist,
           ref: ref?.id,
-          source: kind === "approved" ? ref?.source || "إجابة معتمدة من صيدلي" : kind === "general" ? AI_SOURCE : undefined,
+          source: kind === "approved" ? ref?.source || "إجابة معتمدة من صيدلي" : kind === "general" ? (consultations.length ? AI_REF_SOURCE : AI_SOURCE) : undefined,
         };
         if (buffer) {
           const text = plain(buffer);

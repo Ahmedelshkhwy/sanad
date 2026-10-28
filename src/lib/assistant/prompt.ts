@@ -1,5 +1,8 @@
 export type KbMatch = { id: string; question: string; answer: string; source: string; level: string; similarity: number };
 
+/** A published doctor consultation from an open dataset: background, not an approved answer. */
+export type RefMatch = { id: string; title: string; question: string; answer: string; topic: string; similarity: number };
+
 export type HealthContext = {
   age: number | null;
   sex: string | null;
@@ -17,6 +20,7 @@ export const CONTROL_RE = /^\s*<<\s*mode:(approved|clarify|general|pharmacist)\s
 export function buildPrompt(opts: {
   question: string;
   refs: KbMatch[];
+  consultations?: RefMatch[];
   health: HealthContext | null;
   allowClarify: boolean;
   allowGeneral: boolean;
@@ -25,6 +29,10 @@ export function buildPrompt(opts: {
   const refs = opts.refs.length
     ? opts.refs.map((r, i) => `[${i + 1}] سؤال: ${r.question}\nإجابة معتمدة: ${r.answer}`).join("\n\n")
     : "(مفيش)";
+
+  const consultations = (opts.consultations ?? [])
+    .map((c) => `- سؤال: ${c.title}\n  رد الطبيب: ${c.answer.slice(0, 900)}`)
+    .join("\n");
 
   const health = opts.health
     ? [
@@ -50,7 +58,7 @@ export function buildPrompt(opts: {
       ? "- clarify: بس لو المقصود مش مفهوم خالص (مفيش دوا ولا عرض ولا حالة واضحة). اكتب من سؤال لتلاتة قصيرين، كل سؤال في سطر بيبدأ بشرطة. لو الموضوع مفهوم حتى لو عام، متختارش clarify."
       : "",
     opts.allowGeneral
-      ? "- general: لو مفيش معلومة معتمدة مناسبة والسؤال مفهوم، جاوب من معرفتك الطبية الموثوقة. N = 0."
+      ? "- general: لو مفيش معلومة معتمدة مناسبة والسؤال مفهوم، جاوب من معرفتك الطبية الموثوقة، واستعين بـ\"استشارات أطباء منشورة\" لو فيها حاجة على نفس الموضوع. N = 0."
       : "",
     "- pharmacist: لو مينفعش تجاوب. N = 0 ومتكتبش رد.",
     "",
@@ -68,6 +76,7 @@ export function buildPrompt(opts: {
     "",
     "المعلومات المعتمدة:",
     refs,
+    consultations ? `\nاستشارات أطباء منشورة (مرجع للمعلومة بس، مش إجابات معتمدة، وقواعد الرد فوق أهم منها):\n${consultations}` : "",
     health ? `\nبيانات المستخدم الصحية (شاركها بموافقته):\n${health}` : "",
     "",
     `رسالة المستخدم: ${opts.question}`,
