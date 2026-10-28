@@ -6,6 +6,21 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { STATUSES, STATUS_LABEL } from "@/lib/requests";
 import { formatDate } from "@/lib/format";
 import { UpdateForm } from "./UpdateForm";
+import { ForwardForm } from "./ForwardForm";
+
+type Pharmacy = { id: string; name: string; area: string; phone: string | null };
+
+/** wa.me wants digits with the country code; local Egyptian numbers start with 0. */
+function waNumber(phone: string) {
+  const d = phone.replace(/\D/g, "");
+  return d.startsWith("0") ? `20${d.slice(1)}` : d;
+}
+
+function pharmacyMessage(r: { medicine_name: string | null; strength: string | null; area: string; details: string }) {
+  return [`طلب دوا من سَنَد: ${r.medicine_name ?? ""}${r.strength ? ` ${r.strength}` : ""}`, `المنطقة: ${r.area}`, r.details, "متوفر عندكم؟"]
+    .filter(Boolean)
+    .join("\n");
+}
 
 export const metadata: Metadata = { title: "طلبات الدوا" };
 
@@ -13,9 +28,11 @@ async function Requests({ searchParams }: { searchParams: Promise<{ status?: str
   await requireStaff("/admin/requests");
   const { status } = await searchParams;
   const supabase = await createClient();
+  const { data: partners } = await supabase.from("partners").select("id, name, area, phone").eq("kind", "pharmacy").eq("active", true).order("name");
+  const pharmacies = (partners ?? []) as Pharmacy[];
   let q = supabase
     .from("help_requests")
-    .select("id, medicine_name, strength, area, details, contact_phone, status, created_at, profiles(display_name)")
+    .select("id, medicine_name, strength, area, details, contact_phone, status, created_at, partner_id, profiles(display_name)")
     .order("created_at", { ascending: false })
     .limit(100);
   q = status && (STATUSES as readonly string[]).includes(status) ? q.eq("status", status) : q.in("status", ["new", "reviewing", "searching"]);
@@ -39,6 +56,7 @@ async function Requests({ searchParams }: { searchParams: Promise<{ status?: str
         <ul className="grid gap-3">
           {data.map((r) => {
             const owner = (r.profiles as unknown as { display_name: string } | null)?.display_name;
+            const pharmacy = pharmacies.find((p) => p.id === r.partner_id);
             return (
               <li key={r.id} className="grid gap-3 rounded-2xl border border-line bg-surface p-4 lg:grid-cols-[1.3fr_1fr]">
                 <div className="grid gap-1">
@@ -59,7 +77,25 @@ async function Requests({ searchParams }: { searchParams: Promise<{ status?: str
                     </a>
                   )}
                 </div>
-                <UpdateForm requestId={r.id} current={r.status} />
+                <div className="grid content-start gap-3">
+                  <ForwardForm requestId={r.id} current={r.partner_id} pharmacies={pharmacies} />
+                  {pharmacy && (
+                    <p className="flex flex-wrap items-center gap-2 text-sm">
+                      <span className="text-muted">محوّل لـ {pharmacy.name}</span>
+                      {pharmacy.phone && (
+                        <a
+                          href={`https://wa.me/${waNumber(pharmacy.phone)}?text=${encodeURIComponent(pharmacyMessage(r))}`}
+                          target="_blank"
+                          rel="noopener"
+                          className="text-green-2 underline underline-offset-4"
+                        >
+                          ابعتله على واتساب
+                        </a>
+                      )}
+                    </p>
+                  )}
+                  <UpdateForm requestId={r.id} current={r.status} />
+                </div>
               </li>
             );
           })}

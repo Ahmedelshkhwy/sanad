@@ -6,8 +6,12 @@ import { createClient } from "@/lib/supabase/server";
 import { requireUser, type CurrentUser } from "@/lib/auth";
 import { text, type FormState } from "@/lib/form";
 
-function labelFor(user: CurrentUser, usePseudonym: boolean) {
-  if (usePseudonym && user.pseudonym) return user.pseudonym;
+const ANONYMOUS_LABEL = "من غير اسم";
+
+/** How the author shows publicly: their name, their pseudonym, or no name at all. */
+function labelFor(user: CurrentUser, as: string) {
+  if (as === "anonymous") return ANONYMOUS_LABEL;
+  if (as === "pseudonym" && user.pseudonym) return user.pseudonym;
   return user.displayName || user.pseudonym || "واحد من أهل البلد";
 }
 
@@ -21,7 +25,7 @@ export async function createPost(_prev: FormState, form: FormData): Promise<Form
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("posts")
-    .insert({ author_id: user.id, author_label: labelFor(user, form.get("pseudonym") === "on"), title, body })
+    .insert({ author_id: user.id, author_label: labelFor(user, String(form.get("as"))), title, body })
     .select("id")
     .single();
   if (error || !data) return { status: "error", message: "مقدرناش ننشر. جرّب تاني." };
@@ -36,7 +40,7 @@ export async function addComment(postId: string, _prev: FormState, form: FormDat
   const supabase = await createClient();
   const { error } = await supabase
     .from("comments")
-    .insert({ post_id: postId, author_id: user.id, author_label: labelFor(user, form.get("pseudonym") === "on"), body });
+    .insert({ post_id: postId, author_id: user.id, author_label: labelFor(user, form.get("pseudonym") === "on" ? "pseudonym" : "name"), body });
   if (error) return { status: "error", message: "مقدرناش نضيف التعليق." };
   revalidatePath(`/community/${postId}`);
   return { status: "ok" };

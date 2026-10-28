@@ -16,11 +16,12 @@ async function Post({ params }: { params: Promise<{ id: string }> }) {
   const supabase = await createClient();
   const [user, { data: post }, { data: comments }] = await Promise.all([
     getCurrentUser(),
-    supabase.from("posts").select("id, author_id, author_label, title, body, created_at, status").eq("id", id).maybeSingle(),
+    supabase.from("posts").select("id, author_label, title, body, created_at, status").eq("id", id).maybeSingle(),
     supabase.from("comments").select("id, author_label, body, created_at").eq("post_id", id).eq("status", "published").order("created_at"),
   ]);
   if (!post) notFound();
-  const mine = user?.id === post.author_id;
+  // author ids aren't readable (anonymous posts), so ask the database whether this one is ours
+  const mine = user ? (await supabase.rpc("owns_post", { p_post: id })).data === true : false;
 
   return (
     <article className="grid gap-6">

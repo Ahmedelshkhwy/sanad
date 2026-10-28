@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { requireStaff } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { text } from "@/lib/form";
@@ -24,6 +24,7 @@ async function addPartner(form: FormData) {
     phone: text(form.get("phone"), 20) || null,
     notes: text(form.get("notes"), 500),
   });
+  updateTag("pharmacies");
   revalidatePath("/admin/partners");
 }
 
@@ -32,6 +33,7 @@ async function toggle(id: string, active: boolean) {
   await requireStaff("/admin/partners");
   const supabase = await createClient();
   await supabase.from("partners").update({ active }).eq("id", id);
+  updateTag("pharmacies");
   revalidatePath("/admin/partners");
 }
 

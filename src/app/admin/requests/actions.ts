@@ -19,3 +19,19 @@ export async function updateRequest(requestId: string, _prev: FormState, form: F
   revalidatePath("/admin/requests");
   return { status: "ok", message: "اتحدّث، والمستخدم وصله إشعار." };
 }
+
+/** Forwards a request to a partner pharmacy and tells its owner where it went. */
+export async function forwardRequest(requestId: string, _prev: FormState, form: FormData): Promise<FormState> {
+  const staff = await requireStaff("/admin/requests");
+  const partnerId = String(form.get("partner_id") ?? "");
+  const supabase = await createClient();
+  const { data: partner } = await supabase.from("partners").select("id, name").eq("id", partnerId).eq("active", true).maybeSingle();
+  if (!partner) return { status: "error", message: "اختار صيدلية." };
+  const { error } = await supabase.from("help_requests").update({ partner_id: partner.id }).eq("id", requestId);
+  if (error) return { status: "error", message: "مقدرناش نحوّل الطلب." };
+  await supabase
+    .from("request_updates")
+    .insert({ request_id: requestId, author_id: staff.id, status: "searching", note: `طلبك اتحوّل لصيدلية ${partner.name}.` });
+  revalidatePath("/admin/requests");
+  return { status: "ok", message: `اتحوّل لـ ${partner.name}.` };
+}

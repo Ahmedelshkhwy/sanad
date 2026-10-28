@@ -4,6 +4,7 @@ import { Reveal } from "@/components/Reveal";
 import { VillageScene } from "@/components/VillageScene";
 import { LinkButton } from "@/components/ui/Button";
 import { EMERGENCY_NUMBER } from "@/lib/nav";
+import { networkPharmacies } from "@/lib/pharmacies";
 
 const SERVICES: { href: string; icon: IconName; title: string; text: string }[] = [
   { href: "/assistant", icon: "pill", title: "المساعد الدوائي", text: "اسأل عن استخدام دوا، آثاره الجانبية، وينفع يتاخد مع إيه." },
@@ -18,7 +19,8 @@ const TRUST: { icon: IconName; title: string; text: string }[] = [
   { icon: "alert", title: "مبيشخّصش ومبيكتبش علاج", text: "ولو في خطر عليك، بيوجّهك للإسعاف على طول." },
 ];
 
-export default function HomePage() {
+export default async function HomePage() {
+  const pharmacies = await networkPharmacies();
   return (
     <>
       <section className="py-8 md:py-16">
@@ -41,6 +43,10 @@ export default function HomePage() {
                 <Icon name="pin" size={18} />
                 مش لاقي دوا
               </LinkButton>
+              <LinkButton href="/community/new?ask=1" variant="ghost">
+                <Icon name="people" size={18} />
+                اطلب سَنَد
+              </LinkButton>
             </div>
             <p className="flex items-center gap-2 text-sm text-muted">
               <Icon name="alert" size={18} className="shrink-0 text-urgent" />
@@ -50,7 +56,7 @@ export default function HomePage() {
               </a>
             </p>
           </div>
-          <VillageScene />
+          <VillageScene pharmacies={pharmacies.map((p) => p.name)} />
         </div>
       </section>
 

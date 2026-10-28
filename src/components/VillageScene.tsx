@@ -3,13 +3,19 @@
 import { useEffect, useRef } from "react";
 
 /**
- * Hero illustration: village fields, a canal, houses and one health point.
+ * Hero illustration: village fields, a canal, houses and one health point, with the
+ * partner pharmacies around it as a named network.
  * Drawn on a canvas with a cached static layer. Falls back to a still frame for
  * reduced motion and low-end devices.
  */
 type House = { x: number; y: number; s: number; k: number };
 type Plot = { x: number; y: number; w: number; h: number; k: number };
-type Pulse = { h: House; t: number; back: boolean };
+type Point = { x: number; y: number };
+type Station = Point & { name: string };
+type Pulse = { h: House; to: Point; t: number; back: boolean };
+
+const MAX_STATIONS = 12;
+const shortName = (s: string) => (s.length > 18 ? `${s.slice(0, 17)}…` : s);
 
 function rng(seed: number) {
   return () => {
@@ -28,8 +34,9 @@ function roundRect(c: CanvasRenderingContext2D, x: number, y: number, w: number,
   c.closePath();
 }
 
-export function VillageScene() {
+export function VillageScene({ pharmacies = [] }: { pharmacies?: string[] }) {
   const ref = useRef<HTMLCanvasElement>(null);
+  const names = pharmacies.slice(0, MAX_STATIONS).join("\n");
 
   useEffect(() => {
     const cv = ref.current;
@@ -49,6 +56,9 @@ export function VillageScene() {
     let canal: { x: number; y: number }[] = [];
     let pulses: Pulse[] = [];
     let hub = { x: 0, y: 0 };
+    let stations: Station[] = [];
+    let font = "sans-serif";
+    const stationNames = names ? names.split("\n") : [];
     let layer: HTMLCanvasElement | null = null;
     let visible = true;
     let raf = 0;
@@ -57,6 +67,7 @@ export function VillageScene() {
 
     const readColors = () => {
       const cs = getComputedStyle(root);
+      font = getComputedStyle(document.body).fontFamily || font;
       colors = {};
       ["--green", "--green-2", "--sun", "--mint", "--mint-2", "--surface", "--paper", "--line"].forEach((k) => {
         colors[k] = cs.getPropertyValue(k).trim();
@@ -112,6 +123,23 @@ export function VillageScene() {
         c.stroke();
       });
       c.globalAlpha = 1;
+      // the network: neighbouring pharmacies are wired to each other
+      if (stations.length > 1) {
+        c.strokeStyle = colors["--green"];
+        c.lineWidth = 1.2;
+        c.globalAlpha = 0.22;
+        c.setLineDash([4, 6]);
+        stations.forEach((st, i) => {
+          if (stations.length === 2 && i === 1) return;
+          const nx = stations[(i + 1) % stations.length];
+          c.beginPath();
+          c.moveTo(st.x, st.y);
+          c.lineTo(nx.x, nx.y);
+          c.stroke();
+        });
+        c.setLineDash([]);
+        c.globalAlpha = 1;
+      }
       const g = c.createRadialGradient(hub.x, hub.y, 0, hub.x, hub.y, Math.min(W, H) * 0.3);
       g.addColorStop(0, colors["--surface"]);
       g.addColorStop(1, colors["--surface"] + "00");
@@ -158,6 +186,16 @@ export function VillageScene() {
         houses.push({ x, y, s: 5 + R() * 4, k: R() });
       }
       houses.sort((a, b) => a.y - b.y);
+      stations = [];
+      const count = stationNames.length;
+      stationNames.forEach((name, i) => {
+        // spread around the hub on one ring (two when crowded), keeping the labels inside
+        const ring = count > 6 && i % 2 ? 0.27 : 0.4;
+        const a = -Math.PI / 2 + (i / count) * Math.PI * 2 + (R() - 0.5) * 0.25;
+        const x = Math.min(W - 46, Math.max(46, hub.x + Math.cos(a) * W * ring));
+        const y = Math.min(H - 16, Math.max(34, hub.y + Math.sin(a) * H * ring));
+        stations.push({ x, y, name: shortName(name) });
+      });
       buildStatic();
     };
 
@@ -185,6 +223,46 @@ export function VillageScene() {
       }
     };
 
+    const drawStation = (st: Station, ox: number, oy: number, glow: number) => {
+      const x = st.x + ox, y = st.y + oy, r = 7;
+      ctx.fillStyle = colors["--sun"];
+      ctx.globalAlpha = 0.18 + glow * 0.2;
+      ctx.beginPath();
+      ctx.arc(x, y, r * (1.8 + glow * 0.5), 0, 7);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = colors["--surface"];
+      ctx.beginPath();
+      ctx.arc(x, y, r + 2, 0, 7);
+      ctx.fill();
+      ctx.fillStyle = colors["--green"];
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, 7);
+      ctx.fill();
+      ctx.strokeStyle = colors["--surface"];
+      ctx.lineWidth = 2;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(x - 3.2, y);
+      ctx.lineTo(x + 3.2, y);
+      ctx.moveTo(x, y - 3.2);
+      ctx.lineTo(x, y + 3.2);
+      ctx.stroke();
+      // name tag above the pin
+      ctx.font = `500 12px ${font}`;
+      ctx.direction = "rtl";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      const w = ctx.measureText(st.name).width + 14, ty = y - r - 13;
+      ctx.fillStyle = colors["--surface"];
+      ctx.globalAlpha = 0.92;
+      roundRect(ctx, x - w / 2, ty - 10, w, 20, 10);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = colors["--green"];
+      ctx.fillText(st.name, x, ty + 1);
+    };
+
     const draw = (time: number) => {
       if (!layer) return;
       ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -203,27 +281,44 @@ export function VillageScene() {
         ctx.setLineDash([]);
         ctx.globalAlpha = 1;
       }
+      if (stations.length) {
+        // data flowing between the hub and each pharmacy
+        ctx.strokeStyle = colors["--green-2"];
+        ctx.lineWidth = 1.4;
+        ctx.globalAlpha = 0.5;
+        ctx.setLineDash([3, 9]);
+        ctx.lineDashOffset = reduce ? 0 : -time / 45;
+        stations.forEach((st) => {
+          ctx.beginPath();
+          ctx.moveTo(hub.x + px * 1.1, hub.y + py * 1.1);
+          ctx.lineTo(st.x + px, st.y + py);
+          ctx.stroke();
+        });
+        ctx.setLineDash([]);
+        ctx.globalAlpha = 1;
+      }
       pulses.forEach((p) => {
-        const a = p.h;
-        const mx = (a.x + hub.x) / 2 + px, my = (a.y + hub.y) / 2 - 22 + py;
+        const a = p.h, to = p.to;
+        const mx = (a.x + to.x) / 2 + px, my = (a.y + to.y) / 2 - 22 + py;
         const e = p.t < 0.5 ? 2 * p.t * p.t : 1 - Math.pow(-2 * p.t + 2, 2) / 2;
         ctx.strokeStyle = p.back ? colors["--green"] : colors["--sun"];
         ctx.lineWidth = 1.6;
         ctx.globalAlpha = 0.45 * (1 - Math.abs(p.t - 0.5));
         ctx.beginPath();
         ctx.moveTo(a.x + px, a.y + py);
-        ctx.quadraticCurveTo(mx, my, hub.x + px, hub.y + py);
+        ctx.quadraticCurveTo(mx, my, to.x + px, to.y + py);
         ctx.stroke();
         ctx.globalAlpha = 1;
         const f = p.back ? 1 - e : e;
-        const x = (1 - f) * (1 - f) * (a.x + px) + 2 * (1 - f) * f * mx + f * f * (hub.x + px);
-        const y = (1 - f) * (1 - f) * (a.y + py) + 2 * (1 - f) * f * my + f * f * (hub.y + py);
+        const x = (1 - f) * (1 - f) * (a.x + px) + 2 * (1 - f) * f * mx + f * f * (to.x + px);
+        const y = (1 - f) * (1 - f) * (a.y + py) + 2 * (1 - f) * f * my + f * f * (to.y + py);
         ctx.fillStyle = p.back ? colors["--green"] : colors["--sun"];
         ctx.beginPath();
         ctx.arc(x, y, 3.4, 0, 7);
         ctx.fill();
       });
       houses.forEach((h) => drawHouse(h, px, py));
+      stations.forEach((st, i) => drawStation(st, px, py, reduce ? 0 : (Math.sin(time / 900 + i * 1.7) + 1) / 2));
       const hx = hub.x + px * 1.1, hy = hub.y + py * 1.1;
       const r = Math.max(20, Math.min(W, H) * 0.06);
       const br = reduce ? 0 : (Math.sin(time / 1400) + 1) / 2;
@@ -259,7 +354,13 @@ export function VillageScene() {
 
     const spawn = () => {
       if (houses.length && pulses.length < (lowEnd ? 1 : 3)) {
-        pulses.push({ h: houses[(Math.random() * houses.length) | 0], t: 0, back: false });
+        const h = houses[(Math.random() * houses.length) | 0];
+        // a house reaches the hub, or the nearest pharmacy in the network
+        let to: Point = hub;
+        if (stations.length && Math.random() < 0.6) {
+          to = stations.reduce((best, st) => (Math.hypot(st.x - h.x, st.y - h.y) < Math.hypot(best.x - h.x, best.y - h.y) ? st : best), stations[0]);
+        }
+        pulses.push({ h, to, t: 0, back: false });
       }
     };
 
@@ -345,14 +446,17 @@ export function VillageScene() {
       host?.removeEventListener("pointermove", onMove);
       host?.removeEventListener("pointerleave", onLeave);
     };
-  }, []);
+  }, [names]);
 
   return (
-    <div
+    <>
+      {pharmacies.length > 0 && <p className="sr-only">صيدليات شبكة سَنَد: {pharmacies.join("، ")}</p>}
+      <div
       aria-hidden="true"
       className="relative aspect-[5/4.6] max-w-full overflow-hidden rounded-[28px] bg-mint shadow-card max-md:aspect-[16/11] max-md:rounded-[22px] max-sm:aspect-[4/3]"
     >
-      <canvas ref={ref} className="absolute inset-0 block h-full w-full" />
-    </div>
+        <canvas ref={ref} className="absolute inset-0 block h-full w-full" />
+      </div>
+    </>
   );
 }
