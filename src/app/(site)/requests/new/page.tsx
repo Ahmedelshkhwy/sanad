@@ -2,19 +2,20 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { requireUser } from "@/lib/auth";
 import { RequestForm } from "./RequestForm";
+import { getRegions, regionOptions } from "@/lib/regions";
 import { PageHeader } from "@/components/ui/Field";
 
 export const metadata: Metadata = { title: "طلب دوا" };
 
 async function Form() {
-  const user = await requireUser("/requests/new");
-  return <RequestForm area={user.area ?? ""} />;
+  await requireUser("/requests/new");
+  return <RequestForm regions={regionOptions(await getRegions())} />;
 }
 
 export default function NewRequestPage() {
   return (
     <section className="mx-auto grid w-full max-w-2xl gap-6 px-4 py-10">
-      <PageHeader title="مش لاقي دوا؟" lead="سجّل الدوا اللي محتاجه، وهنبلغك أول ما نوصل لحاجة." />
+      <PageHeader title="مش لاقي دوا؟" lead="سجّل الدوا اللي محتاجه، وهنبعته للصيدليات اللي في منطقتك ونبلغك أول ما واحدة تأكّد إنه عندها." />
       <div className="rounded-[20px] border border-line bg-surface p-5">
         <Suspense fallback={<p className="text-muted">بنحمّل…</p>}>
           <Form />

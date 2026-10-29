@@ -45,6 +45,11 @@ export function SiteFooter() {
                 الشروط
               </Link>
             </li>
+            <li>
+              <Link href="/portal" className="hover:text-ink">
+                بوابة الصيدليات
+              </Link>
+            </li>
           </ul>
         </div>
       </div>

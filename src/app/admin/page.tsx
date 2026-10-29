@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { requireStaff } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { OPEN_STATUSES } from "@/lib/requests";
 import { WeekChart } from "./WeekChart";
 
 export const metadata: Metadata = { title: "الإدارة" };
@@ -15,7 +16,7 @@ async function Overview() {
 
   const count = (q: PromiseLike<{ count: number | null }>) => Promise.resolve(q).then((r) => r.count ?? 0);
   const [openRequests, openReports, drafts, logs] = await Promise.all([
-    count(supabase.from("help_requests").select("id", { count: "exact", head: true }).in("status", ["new", "reviewing", "searching"])),
+    count(supabase.from("help_requests").select("id", { count: "exact", head: true }).in("status", OPEN_STATUSES)),
     count(supabase.from("reports").select("id", { count: "exact", head: true }).eq("status", "open")),
     count(supabase.from("kb_entries").select("id", { count: "exact", head: true }).eq("approved", false)),
     supabase.from("assistant_logs").select("mode, needs_pharmacist, created_at").gte("created_at", since.toISOString()).then((r) => r.data ?? []),

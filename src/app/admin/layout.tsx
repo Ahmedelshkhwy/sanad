@@ -8,7 +8,8 @@ const NAV = [
   { href: "/admin/logs", label: "أسئلة المساعد" },
   { href: "/admin/kb", label: "الإجابات المعتمدة" },
   { href: "/admin/reports", label: "البلاغات" },
-  { href: "/admin/partners", label: "الصيدليات والجهات" },
+  { href: "/admin/providers", label: "الصيدليات" },
+  { href: "/admin/regions", label: "المناطق" },
   { href: "/admin/users", label: "الحسابات" },
 ];
 

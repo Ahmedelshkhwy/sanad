@@ -14,8 +14,8 @@ export const metadata: Metadata = { title: "البحث عن دوا" };
 const STEPS: { icon: IconName; title: string; text: string }[] = [
   { icon: "send", title: "تسجّل طلبك", text: "اسم الدوا وتركيزه ومنطقتك." },
   { icon: "shield", title: "نراجعه", text: "نتأكد إن البيانات واضحة." },
-  { icon: "search", title: "ندوّر عليه", text: "نسأل الصيدليات في منطقتك." },
-  { icon: "bell", title: "يوصلك الرد", text: "إشعار بالنتيجة على حسابك." },
+  { icon: "search", title: "نبعته للصيدليات", text: "الصيدليات الشريكة في منطقتك بتشوفه من غير اسمك." },
+  { icon: "bell", title: "يوصلك الرد", text: "إشعار بالصيدلية اللي عندها الدوا وإزاي تكلّمها." },
 ];
 
 async function MyRequests() {

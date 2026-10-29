@@ -4,9 +4,11 @@ import { useActionState } from "react";
 import { createRequest } from "../actions";
 import { Button } from "@/components/ui/Button";
 import { Field, FormMessage, TextArea, TextInput } from "@/components/ui/Field";
+import { RegionSelect } from "@/components/RegionSelect";
+import type { RegionOption } from "@/lib/regions";
 import { idle, type FormState } from "@/lib/form";
 
-export function RequestForm({ area }: { area: string }) {
+export function RequestForm({ regions }: { regions: RegionOption[] }) {
   const [state, action, pending] = useActionState<FormState, FormData>(createRequest, idle);
   return (
     <form action={action} className="grid gap-4">
@@ -18,10 +20,10 @@ export function RequestForm({ area }: { area: string }) {
           <TextInput name="strength" maxLength={60} />
         </Field>
         <Field label="القرية أو المدينة">
-          <TextInput name="area" required maxLength={80} defaultValue={area} />
+          <RegionSelect options={regions} required />
         </Field>
       </div>
-      <Field label="رقم موبايل للتواصل" hint="اختياري. هيظهر للصيدلي بس.">
+      <Field label="رقم موبايل للتواصل" hint="اختياري. هيظهر لفريق سَنَد بس، مش للصيدليات.">
         <div className="flex gap-1.5" dir="ltr">
           <span className="grid place-items-center rounded-xl border-[1.5px] border-line px-3 text-muted">+20</span>
           <TextInput name="contact_phone" inputMode="tel" maxLength={14} autoComplete="tel-national" className="text-left" />

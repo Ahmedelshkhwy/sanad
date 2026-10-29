@@ -1,24 +1,38 @@
-export const STATUSES = ["new", "reviewing", "searching", "found", "not_found", "closed"] as const;
+export const STATUSES = ["pending_review", "approved", "published", "available", "completed", "rejected", "expired", "cancelled"] as const;
 export type RequestStatus = (typeof STATUSES)[number];
 
+/** Statuses that still need someone to act; the rest are final. */
+export const OPEN_STATUSES: RequestStatus[] = ["pending_review", "approved", "published", "available"];
+
 export const STATUS_LABEL: Record<RequestStatus, string> = {
-  new: "اتسجّل",
-  reviewing: "بيتراجع",
-  searching: "بندوّر عليه",
-  found: "لقيناه",
-  not_found: "ملقيناهوش",
-  closed: "اتقفل",
+  pending_review: "قيد المراجعة",
+  approved: "تمت الموافقة",
+  published: "منشور للصيدليات",
+  available: "تم تأكيد التوافر",
+  completed: "مكتمل",
+  rejected: "مرفوض",
+  expired: "منتهي",
+  cancelled: "ملغي",
 };
 
 export const STATUS_TONE: Record<RequestStatus, string> = {
-  new: "bg-mint text-green",
-  reviewing: "bg-mint text-green",
-  searching: "bg-sun-soft text-ink",
-  found: "bg-green text-on-green",
-  not_found: "bg-urgent-soft text-urgent",
-  closed: "bg-line text-muted",
+  pending_review: "bg-mint text-green",
+  approved: "bg-mint text-green",
+  published: "bg-sun-soft text-ink",
+  available: "bg-green text-on-green",
+  completed: "bg-line text-muted",
+  rejected: "bg-urgent-soft text-urgent",
+  expired: "bg-line text-muted",
+  cancelled: "bg-line text-muted",
 };
 
 export function isStatus(s: string): s is RequestStatus {
   return (STATUSES as readonly string[]).includes(s);
 }
+
+export function isOpen(s: string) {
+  return (OPEN_STATUSES as string[]).includes(s);
+}
+
+/** Shown wherever a pharmacy's "available" reply appears. */
+export const NOT_A_RESERVATION = "تأكيد التوافر مش حجز: الدوا كان موجود وقت رد الصيدلية، وممكن يخلص قبل ما توصل. كلّمهم الأول.";
