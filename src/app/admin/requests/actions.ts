@@ -51,3 +51,13 @@ export async function finishRequest(requestId: string, _prev: FormState, form: F
   revalidatePath("/admin/requests");
   return { status: "ok", message: "اتقفل، والمستخدم وصله إشعار." };
 }
+
+/** A free message to the requester, at any stage. */
+export async function messageRequest(requestId: string, _prev: FormState, form: FormData): Promise<FormState> {
+  await requireStaff("/admin/requests");
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("message_request", { p_request: requestId, p_note: text(form.get("note"), 1000) });
+  if (error) return dbError(error, "مقدرناش نبعت الرسالة.");
+  revalidatePath("/admin/requests");
+  return { status: "ok", message: "اتبعتت للمستخدم." };
+}

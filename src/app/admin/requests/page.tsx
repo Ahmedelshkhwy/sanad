@@ -6,7 +6,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { OPEN_STATUSES, STATUSES, STATUS_LABEL, isStatus } from "@/lib/requests";
 import { getRegions, regionOptions } from "@/lib/regions";
 import { formatDate } from "@/lib/format";
-import { FinishForm, PublishForm, ReviewForm } from "./RequestForms";
+import { FinishForm, MessageForm, PublishForm, ReviewForm } from "./RequestForms";
 
 export const metadata: Metadata = { title: "طلبات الدوا" };
 
@@ -114,6 +114,12 @@ async function Requests({ searchParams }: { searchParams: Promise<{ status?: str
                     <PublishForm requestId={r.id} pharmacies={pharmacies ?? []} first={r.status === "approved"} />
                   )}
                   {["published", "available"].includes(r.status) && <FinishForm requestId={r.id} />}
+                  <details className="text-sm">
+                    <summary className="cursor-pointer">رسالة للمستخدم</summary>
+                    <div className="mt-2">
+                      <MessageForm requestId={r.id} />
+                    </div>
+                  </details>
                 </div>
               </li>
             );

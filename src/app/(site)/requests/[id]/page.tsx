@@ -21,13 +21,13 @@ async function Detail({ params }: { params: Promise<{ id: string }> }) {
   await supabase.rpc("expire_requests");
   const [{ data: req }, { data: updates }, { data: offerRows }] = await Promise.all([
     supabase.from("help_requests").select("id, medicine_name, strength, area, details, status, created_at, expires_at").eq("id", id).maybeSingle(),
-    supabase.from("request_updates").select("id, status, note, created_at").eq("request_id", id).order("created_at"),
+    supabase.from("request_updates").select("id, status, note, kind, source, created_at").eq("request_id", id).order("created_at"),
     supabase.rpc("request_offers", { p_request: id }),
   ]);
   if (!req) notFound();
 
   const offers = (offerRows ?? []) as Offer[];
-  const timeline = [{ id: 0, status: "pending_review", note: "", created_at: req.created_at }, ...(updates ?? [])];
+  const timeline = [{ id: 0, status: "pending_review", note: "", kind: "status", source: "", created_at: req.created_at }, ...(updates ?? [])];
   return (
     <div className="grid gap-6">
       <div className="grid gap-2 rounded-[20px] border border-line bg-surface p-5">
@@ -78,7 +78,9 @@ async function Detail({ params }: { params: Promise<{ id: string }> }) {
         {timeline.map((u) => (
           <li key={u.id} className="relative grid gap-1">
             <span className="absolute -start-[1.72rem] top-1.5 size-3 rounded-full bg-green-2 ring-4 ring-paper" aria-hidden="true" />
-            <b className="font-medium">{isStatus(u.status) ? STATUS_LABEL[u.status] : u.status}</b>
+            <b className="font-medium">
+              {u.kind === "message" ? `رسالة من ${u.source}` : isStatus(u.status) ? STATUS_LABEL[u.status] : u.status}
+            </b>
             {u.note && <p className="whitespace-pre-line text-muted">{u.note}</p>}
             <time className="text-xs text-muted" dateTime={u.created_at}>
               {formatDate(u.created_at)}

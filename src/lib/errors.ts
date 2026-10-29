@@ -10,6 +10,7 @@ const MESSAGES: Record<string, string> = {
   closed: "الطلب ده اتقفل ومبقاش بيستقبل ردود.",
   already_pending: "عندك طلب انضمام لسه بيتراجع.",
   no_account: "مفيش حساب على سَنَد بالرقم ده. خلّيه يسجّل الأول.",
+  too_many: "بعت رسايل كتير على الطلب ده. لو محتاج حاجة كلّم فريق سَنَد.",
 };
 
 /** Turns a Supabase error into a form message; unknown errors get the fallback. */

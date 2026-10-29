@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { applyProvider, respond, saveMyProvider } from "./actions";
+import { applyProvider, respond, saveMyProvider, sendNote } from "./actions";
 import { Button } from "@/components/ui/Button";
 import { Field, FormMessage, TextInput } from "@/components/ui/Field";
 import { RegionChecks, RegionSelect } from "@/components/RegionSelect";
@@ -99,6 +99,19 @@ export function ProfileForm({
           احفظ
         </Button>
       </div>
+    </form>
+  );
+}
+
+export function NoteForm({ requestId, providerId }: { requestId: string; providerId: string }) {
+  const [state, action, pending] = useActionState<FormState, FormData>(sendNote.bind(null, requestId, providerId), idle);
+  return (
+    <form action={action} className="grid gap-2">
+      <TextInput name="note" required minLength={2} maxLength={300} placeholder="سؤال أو ملاحظة لصاحب الطلب" className="!py-2 text-sm" />
+      <FormMessage state={state} />
+      <Button type="submit" variant="ghost" disabled={pending} className="justify-self-start !min-h-10 text-sm">
+        {pending ? "بنبعت…" : "ابعت ملاحظة"}
+      </Button>
     </form>
   );
 }

@@ -63,3 +63,12 @@ export async function saveMyProvider(providerId: string, _prev: FormState, form:
   revalidatePath("/portal");
   return { status: "ok", message: "اتحفظ." };
 }
+
+/** A note from the pharmacy to the requester (they never see who the requester is). */
+export async function sendNote(requestId: string, providerId: string, _prev: FormState, form: FormData): Promise<FormState> {
+  await requireUser("/portal");
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("provider_message", { p_request: requestId, p_provider: providerId, p_note: text(form.get("note"), 300) });
+  if (error) return dbError(error, "مقدرناش نبعت الملاحظة.");
+  return { status: "ok", message: "اتبعتت لصاحب الطلب." };
+}

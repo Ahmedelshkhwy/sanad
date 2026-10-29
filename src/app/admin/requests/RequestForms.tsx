@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { finishRequest, publishRequest, reviewRequest } from "./actions";
+import { finishRequest, messageRequest, publishRequest, reviewRequest } from "./actions";
 import { Button } from "@/components/ui/Button";
 import { Field, FormMessage, TextArea, inputClass } from "@/components/ui/Field";
 import { RegionSelect } from "@/components/RegionSelect";
@@ -104,6 +104,19 @@ export function FinishForm({ requestId }: { requestId: string }) {
           إلغاء الطلب
         </Button>
       </div>
+    </form>
+  );
+}
+
+export function MessageForm({ requestId }: { requestId: string }) {
+  const [state, action, pending] = useActionState<FormState, FormData>(messageRequest.bind(null, requestId), idle);
+  return (
+    <form action={action} className="grid gap-2">
+      <TextArea name="note" rows={2} required minLength={2} maxLength={1000} aria-label="رسالة للمستخدم" placeholder="رسالة للمستخدم" />
+      <FormMessage state={state} />
+      <Button type="submit" variant="ghost" disabled={pending} className={`justify-self-start ${small}`}>
+        {pending ? "بنبعت…" : "ابعت للمستخدم"}
+      </Button>
     </form>
   );
 }

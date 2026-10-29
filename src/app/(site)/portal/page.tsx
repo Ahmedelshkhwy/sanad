@@ -7,7 +7,7 @@ import { PROVIDER_STATUS } from "@/lib/providers";
 import { getRegions, regionOptions } from "@/lib/regions";
 import { formatDate } from "@/lib/format";
 import { PageHeader } from "@/components/ui/Field";
-import { ApplyForm, ProfileForm, RespondForm } from "./PortalForms";
+import { ApplyForm, NoteForm, ProfileForm, RespondForm } from "./PortalForms";
 
 export const metadata: Metadata = { title: "بوابة الصيدليات" };
 
@@ -53,7 +53,15 @@ function Inbox({ items, providerId }: { items: InboxItem[]; providerId: string }
               {r.public_note && <p className="whitespace-pre-line text-sm">{r.public_note}</p>}
             </div>
             {open ? (
-              <RespondForm requestId={r.request_id} providerId={providerId} response={r.response} note={r.note} />
+              <div className="grid content-start gap-3">
+                <RespondForm requestId={r.request_id} providerId={providerId} response={r.response} note={r.note} />
+                <details className="text-sm">
+                  <summary className="cursor-pointer">ابعت ملاحظة لصاحب الطلب</summary>
+                  <div className="mt-2">
+                    <NoteForm requestId={r.request_id} providerId={providerId} />
+                  </div>
+                </details>
+              </div>
             ) : (
               <p className="text-sm text-muted">
                 الطلب اتقفل
@@ -129,7 +137,7 @@ async function Portal({ searchParams }: { searchParams: Promise<{ p?: string }> 
             <h3 id="inbox" className="text-xl font-semibold">
               طلبات الدوا {waiting > 0 && <span className="text-base font-normal text-muted">· {waiting} مستني ردك</span>}
             </h3>
-            <p className="text-sm text-muted">ردك "متوفر" بيوصّل لصاحب الطلب اسم الصيدلية وتليفونها عشان يكلّمكم. ولو الدوا خلص، غيّر ردك.</p>
+            <p className="text-sm text-muted">ردك "متوفر" بيبعت لصاحب الطلب إشعار باسم الصيدلية، ويظهر له تليفونها عشان يكلّمكم. ولو الدوا خلص، غيّر ردك.</p>
             <Inbox items={inbox} providerId={provider.id} />
           </section>
           {current.role === "owner" && (
