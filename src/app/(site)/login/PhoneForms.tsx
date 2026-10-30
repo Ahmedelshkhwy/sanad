@@ -1,12 +1,12 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { phoneSignIn, phoneSignUp } from "./phone-actions";
+import { phoneSignIn, phoneSignUp, type AuthState } from "./phone-actions";
 import { Button } from "@/components/ui/Button";
 import { Field, FormMessage, TextInput, inputClass } from "@/components/ui/Field";
 import { PinInput } from "@/components/ui/PinInput";
-import { idle, type FormState } from "@/lib/form";
+import { idle } from "@/lib/form";
 
 function PhoneField() {
   return (
@@ -24,8 +24,13 @@ export function PhoneForms({ onEmail }: { onEmail: () => void }) {
   const params = useSearchParams();
   const next = params.get("next") ?? "/";
   const [mode, setMode] = useState<"in" | "up">("in");
-  const [inState, inAction, inPending] = useActionState<FormState, FormData>(phoneSignIn, idle);
-  const [upState, upAction, upPending] = useActionState<FormState, FormData>(phoneSignUp, idle);
+  const [inState, inAction, inPending] = useActionState<AuthState, FormData>(phoneSignIn, idle);
+  const [upState, upAction, upPending] = useActionState<AuthState, FormData>(phoneSignUp, idle);
+  const target = inState.next ?? upState.next;
+  useEffect(() => {
+    // a full load, not a client transition, so nothing cached from before sign-in is reused
+    if (target) window.location.assign(target);
+  }, [target]);
 
   return (
     <div className="grid gap-5">
@@ -50,7 +55,7 @@ export function PhoneForms({ onEmail }: { onEmail: () => void }) {
           <PhoneField />
           <PinInput name="pin" label="الرقم السري" />
           <FormMessage state={inState} />
-          <Button type="submit" disabled={inPending}>
+          <Button type="submit" disabled={inPending || !!target}>
             {inPending ? "بندخّلك…" : "دخول"}
           </Button>
           <p className="text-sm text-muted">نسيت الرقم السري؟ كلّم الصيدلي على واتساب وهو يعملك رقم جديد.</p>
@@ -66,7 +71,7 @@ export function PhoneForms({ onEmail }: { onEmail: () => void }) {
           <PinInput name="pin_confirm" label="اكتبه تاني للتأكيد" />
           <p className="text-xs text-muted">٥ خانات، أرقام أو حروف زي ما تحب. احفظه كويس.</p>
           <FormMessage state={upState} />
-          <Button type="submit" disabled={upPending}>
+          <Button type="submit" disabled={upPending || !!target}>
             {upPending ? "بنعمل حسابك…" : "اعمل الحساب"}
           </Button>
         </form>

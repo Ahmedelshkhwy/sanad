@@ -1,14 +1,16 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { normalizePhone, normalizePin, phoneEmail, pinPassword } from "@/lib/pin";
 import { text, type FormState } from "@/lib/form";
 
+/** On success the form does a full page load to `next`, so the header and every page see the new session. */
+export type AuthState = FormState & { next?: string };
+
 const safeNext = (v: FormDataEntryValue | null) => {
   const s = String(v ?? "/");
-  return /^\/[^/\\]/.test(s) || s === "/" ? s : "/";
+  return (/^\/[^/\\]/.test(s) && !s.startsWith("/login")) || s === "/" ? s : "/";
 };
 
 const LOCKED = "دخلت رقم سري غلط كذا مرة. استنى ربع ساعة وجرّب تاني، أو كلّم الصيدلي على واتساب.";
@@ -24,7 +26,7 @@ async function signIn(phone: string, pin: string): Promise<boolean> {
   return true;
 }
 
-export async function phoneSignIn(_prev: FormState, form: FormData): Promise<FormState> {
+export async function phoneSignIn(_prev: AuthState, form: FormData): Promise<AuthState> {
   const phone = normalizePhone(String(form.get("phone") ?? ""), String(form.get("cc") ?? "20"));
   const pin = normalizePin(String(form.get("pin") ?? ""));
   if (!phone) return { status: "error", message: "رقم الموبايل مش مظبوط." };
@@ -35,10 +37,10 @@ export async function phoneSignIn(_prev: FormState, form: FormData): Promise<For
   if (allowed === false) return { status: "error", message: LOCKED };
 
   if (!(await signIn(phone, pin))) return { status: "error", message: "الرقم أو الرقم السري غلط." };
-  redirect(safeNext(form.get("next")));
+  return { status: "ok", message: "أهلًا بيك، بندخّلك…", next: safeNext(form.get("next")) };
 }
 
-export async function phoneSignUp(_prev: FormState, form: FormData): Promise<FormState> {
+export async function phoneSignUp(_prev: AuthState, form: FormData): Promise<AuthState> {
   const name = text(form.get("name"), 60);
   const phone = normalizePhone(String(form.get("phone") ?? ""), String(form.get("cc") ?? "20"));
   const pin = normalizePin(String(form.get("pin") ?? ""));
@@ -65,5 +67,5 @@ export async function phoneSignUp(_prev: FormState, form: FormData): Promise<For
   await admin.from("profiles").update({ phone, display_name: name }).eq("id", created.user.id);
 
   if (!(await signIn(phone, pin))) return { status: "error", message: "الحساب اتعمل، بس الدخول ما تمّش. جرّب تدخل برقمك." };
-  redirect(safeNext(form.get("next")));
+  return { status: "ok", message: "حسابك اتعمل بنجاح، بندخّلك…", next: safeNext(form.get("next")) };
 }
