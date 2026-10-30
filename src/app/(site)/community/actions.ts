@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireUser, type CurrentUser } from "@/lib/auth";
+import { dbError } from "@/lib/errors";
 import { text, type FormState } from "@/lib/form";
 
 const ANONYMOUS_LABEL = "من غير اسم";
@@ -28,7 +29,7 @@ export async function createPost(_prev: FormState, form: FormData): Promise<Form
     .insert({ author_id: user.id, author_label: labelFor(user, String(form.get("as"))), title, body })
     .select("id")
     .single();
-  if (error || !data) return { status: "error", message: "مقدرناش ننشر. جرّب تاني." };
+  if (error || !data) return dbError(error, "مقدرناش ننشر. جرّب تاني.");
   revalidatePath("/community");
   redirect(`/community/${data.id}`);
 }
@@ -41,7 +42,7 @@ export async function addComment(postId: string, _prev: FormState, form: FormDat
   const { error } = await supabase
     .from("comments")
     .insert({ post_id: postId, author_id: user.id, author_label: labelFor(user, form.get("pseudonym") === "on" ? "pseudonym" : "name"), body });
-  if (error) return { status: "error", message: "مقدرناش نضيف التعليق." };
+  if (error) return dbError(error, "مقدرناش نضيف التعليق.");
   revalidatePath(`/community/${postId}`);
   return { status: "ok" };
 }

@@ -29,7 +29,7 @@ export async function createRequest(_prev: FormState, form: FormData): Promise<F
     .insert({ user_id: user.id, kind: "medicine", medicine_name: medicine, strength, area, region_id: regionId, details, contact_phone: phone })
     .select("id")
     .single();
-  if (error || !data) return { status: "error", message: "مقدرناش نسجّل الطلب. جرّب تاني." };
+  if (error || !data) return dbError(error, "مقدرناش نسجّل الطلب. جرّب تاني.");
 
   await sendTelegram(
     `[طلب دوا جديد]\n\n${medicine}${strength ? ` ${strength}` : ""}\nالمنطقة: ${area}${details ? `\nتفاصيل: ${details}` : ""}${phone ? `\nموبايل: ${phone}` : ""}\nالوقت: ${cairoTime()}`,
