@@ -1,4 +1,5 @@
 import "server-only";
+import { CONTACT } from "@/lib/nav";
 
 /** Sends a message to the pharmacist's Telegram. Never throws: alerts must not break a reply. */
 export async function sendTelegram(text: string): Promise<boolean> {
@@ -23,6 +24,5 @@ export function cairoTime(d = new Date()) {
 }
 
 export function whatsappLink(message: string): string | null {
-  const n = (process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "").replace(/\D/g, "");
-  return n ? `https://wa.me/${n}?text=${encodeURIComponent(message)}` : null;
+  return `https://wa.me/${CONTACT.whatsapp}?text=${encodeURIComponent(message)}`;
 }

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Icon } from "@/components/Icon";
 import { buttonClass } from "@/components/ui/Button";
-import { EMERGENCY_NUMBER } from "@/lib/nav";
+import { CONTACT, EMERGENCY_NUMBER } from "@/lib/nav";
 
 type Kind = "approved" | "clarify" | "general" | "handoff" | "urgent" | "error";
 type Message =
@@ -13,7 +13,7 @@ type Message =
 
 const SUGGESTIONS = ["ينفع آخد بنادول مع دوا برد؟", "ابني عنده سخونية، أديله إيه؟", "نسيت آخد جرعة الدوا، أعمل إيه؟"];
 const FAIL = "حصلت مشكلة ومقدرتش أرد دلوقتي. جرّب تاني بعد شوية، وفي الطوارئ كلّم 123.";
-const WA = (process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "").replace(/\D/g, "");
+const WA = CONTACT.whatsapp;
 
 function sessionId() {
   try {

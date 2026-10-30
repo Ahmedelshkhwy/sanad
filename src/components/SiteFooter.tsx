@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
-import { EMERGENCY_NUMBER, NAV } from "@/lib/nav";
+import { CONTACT, EMERGENCY_NUMBER, NAV } from "@/lib/nav";
 
 export function SiteFooter() {
   return (
     <footer className="border-t border-line bg-surface pb-28 pt-10 text-sm md:pb-8">
-      <div className="mx-auto grid w-full max-w-6xl gap-8 px-4 md:grid-cols-[1.5fr_1fr_1fr]">
+      <div className="mx-auto grid w-full max-w-6xl gap-8 px-4 md:grid-cols-[1.5fr_1fr_1fr_1fr]">
         <div>
           <Link href="/" aria-label="سَنَد، الرئيسية">
             <Logo />
@@ -30,6 +30,26 @@ export function SiteFooter() {
                 </Link>
               </li>
             ))}
+          </ul>
+        </div>
+        <div>
+          <h4 className="mb-2 font-medium">تواصل معانا</h4>
+          <ul className="grid gap-1.5 text-muted">
+            <li>
+              <a href={`https://wa.me/${CONTACT.whatsapp}`} target="_blank" rel="noopener" className="hover:text-ink">
+                واتساب <span dir="ltr">+{CONTACT.whatsapp}</span>
+              </a>
+            </li>
+            <li>
+              <a href={`tel:+${CONTACT.whatsapp}`} className="hover:text-ink">
+                اتصل بينا
+              </a>
+            </li>
+            <li>
+              <a href={`mailto:${CONTACT.email}`} className="break-all hover:text-ink" dir="ltr">
+                {CONTACT.email}
+              </a>
+            </li>
           </ul>
         </div>
         <div>

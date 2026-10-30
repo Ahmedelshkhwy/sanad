@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { Field, FormMessage, TextInput, inputClass } from "@/components/ui/Field";
 import { PinInput } from "@/components/ui/PinInput";
 import { idle } from "@/lib/form";
+import { CONTACT } from "@/lib/nav";
 
 function PhoneField() {
   return (
@@ -58,7 +59,13 @@ export function PhoneForms({ onEmail }: { onEmail: () => void }) {
           <Button type="submit" disabled={inPending || !!target}>
             {inPending ? "بندخّلك…" : "دخول"}
           </Button>
-          <p className="text-sm text-muted">نسيت الرقم السري؟ كلّم الصيدلي على واتساب وهو يعملك رقم جديد.</p>
+          <p className="text-sm text-muted">
+            نسيت الرقم السري؟{" "}
+            <a href={`https://wa.me/${CONTACT.whatsapp}`} target="_blank" rel="noopener" className="text-green-2 underline underline-offset-4">
+              كلّم الصيدلي على واتساب
+            </a>{" "}
+            وهو يعملك رقم جديد.
+          </p>
         </form>
       ) : (
         <form action={upAction} className="grid gap-4">
