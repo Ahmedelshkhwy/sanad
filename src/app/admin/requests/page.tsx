@@ -6,7 +6,11 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { OPEN_STATUSES, STATUSES, STATUS_LABEL, isStatus } from "@/lib/requests";
 import { getRegions, regionOptions } from "@/lib/regions";
 import { formatDate } from "@/lib/format";
+import { after } from "next/server";
 import { FinishForm, MessageForm, PublishForm, ReviewForm } from "./RequestForms";
+import { setPhotoShared } from "./actions";
+import { RequestPhotos, type ShownPhoto } from "@/components/RequestPhotos";
+import { purgeStalePhotos, signPhotos } from "@/lib/photos";
 
 export const metadata: Metadata = { title: "طلبات الدوا" };
 
@@ -63,10 +67,32 @@ async function Requests({ searchParams }: { searchParams: Promise<{ status?: str
     getRegions().then(regionOptions),
   ]);
   const ids = (data ?? []).map((r) => r.id);
-  const { data: targetRows } = ids.length
-    ? await supabase.from("request_targets").select("request_id, seen_at, response, responded_at, note, providers(name)").in("request_id", ids)
-    : { data: [] };
+  const [{ data: targetRows }, { data: photoRows }] = ids.length
+    ? await Promise.all([
+        supabase.from("request_targets").select("request_id, seen_at, response, responded_at, note, providers(name)").in("request_id", ids),
+        supabase.from("request_photos").select("id, request_id, path, kind, shared").in("request_id", ids).order("created_at"),
+      ])
+    : [{ data: [] }, { data: [] }];
   const targets = (targetRows ?? []) as unknown as Target[];
+  const urls = await signPhotos((photoRows ?? []).map((p) => p.path));
+  const photosOf = (requestId: string): ShownPhoto[] =>
+    (photoRows ?? [])
+      .filter((p) => p.request_id === requestId && urls.has(p.path))
+      .map((p) => ({
+        key: p.id,
+        url: urls.get(p.path)!,
+        label: p.kind === "prescription" ? "روشتة · للفريق بس" : p.shared ? "علبة · بتظهر للصيدليات" : "علبة · مخفية عن الصيدليات",
+        extra:
+          p.kind === "box" ? (
+            <form action={setPhotoShared.bind(null, p.id, !p.shared)}>
+              <button type="submit" className="text-green-2 underline underline-offset-4">
+                {p.shared ? "اخفيها عن الصيدليات" : "اعرضها للصيدليات"}
+              </button>
+            </form>
+          ) : undefined,
+      }));
+  // old photos are deleted once their request has been closed a while
+  after(purgeStalePhotos);
 
   return (
     <div className="grid gap-4">
@@ -100,6 +126,7 @@ async function Requests({ searchParams }: { searchParams: Promise<{ status?: str
                     {r.expires_at && ` · ينتهي ${formatDate(r.expires_at)}`}
                   </p>
                   {r.details && <p className="whitespace-pre-line text-sm">{r.details}</p>}
+                  <RequestPhotos photos={photosOf(r.id)} />
                   {r.public_note && <p className="text-sm text-muted">للصيدليات: {r.public_note}</p>}
                   {r.contact_phone && (
                     <a href={`https://wa.me/${r.contact_phone.replace(/\D/g, "")}`} target="_blank" rel="noopener" className="text-sm text-green-2 underline underline-offset-4" dir="ltr">
@@ -109,7 +136,7 @@ async function Requests({ searchParams }: { searchParams: Promise<{ status?: str
                   <Replies targets={mine} />
                 </div>
                 <div className="grid content-start gap-4">
-                  {r.status === "pending_review" && <ReviewForm requestId={r.id} publicNote={r.public_note || label} region={r.region_id} regions={regions} />}
+                  {r.status === "pending_review" && <ReviewForm requestId={r.id} publicNote={r.public_note || (r.medicine_name === "دوا في الصورة" ? "" : label)} name={r.medicine_name === "دوا في الصورة" ? "" : (r.medicine_name ?? "")} strength={r.strength ?? ""} region={r.region_id} regions={regions} />}
                   {["approved", "published", "available"].includes(r.status) && (
                     <PublishForm requestId={r.id} pharmacies={pharmacies ?? []} first={r.status === "approved"} />
                   )}

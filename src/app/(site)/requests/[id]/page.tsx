@@ -8,6 +8,8 @@ import { formatDate } from "@/lib/format";
 import { buttonClass } from "@/components/ui/Button";
 import { NOT_A_RESERVATION, STATUS_LABEL, isOpen, isStatus } from "@/lib/requests";
 import { CloseForm } from "./CloseForm";
+import { RequestPhotos } from "@/components/RequestPhotos";
+import { signPhotos } from "@/lib/photos";
 
 type Offer = { provider_name: string; phone: string | null; whatsapp: string | null; address: string; area: string; responded_at: string; note: string };
 
@@ -19,12 +21,17 @@ async function Detail({ params }: { params: Promise<{ id: string }> }) {
   if (!/^[0-9a-f-]{36}$/.test(id)) notFound();
   const supabase = await createClient();
   await supabase.rpc("expire_requests");
-  const [{ data: req }, { data: updates }, { data: offerRows }] = await Promise.all([
+  const [{ data: req }, { data: updates }, { data: offerRows }, { data: photoRows }] = await Promise.all([
     supabase.from("help_requests").select("id, medicine_name, strength, area, details, status, created_at, expires_at").eq("id", id).maybeSingle(),
     supabase.from("request_updates").select("id, status, note, kind, source, created_at").eq("request_id", id).order("created_at"),
     supabase.rpc("request_offers", { p_request: id }),
+    supabase.from("request_photos").select("path, kind").eq("request_id", id).order("created_at"),
   ]);
   if (!req) notFound();
+  const urls = await signPhotos((photoRows ?? []).map((p) => p.path));
+  const photos = (photoRows ?? []).flatMap((p) =>
+    urls.has(p.path) ? [{ key: p.path, url: urls.get(p.path)!, label: p.kind === "box" ? "علبة الدوا" : "الروشتة (لفريق سَنَد بس)" }] : [],
+  );
 
   const offers = (offerRows ?? []) as Offer[];
   const timeline = [{ id: 0, status: "pending_review", note: "", kind: "status", source: "", created_at: req.created_at }, ...(updates ?? [])];
@@ -40,6 +47,7 @@ async function Detail({ params }: { params: Promise<{ id: string }> }) {
         </div>
         <p className="text-muted">{req.area}</p>
         {req.details && <p className="whitespace-pre-line">{req.details}</p>}
+        <RequestPhotos photos={photos} />
         {req.expires_at && isOpen(req.status) && <p className="text-sm text-muted">الصيدليات بتستقبل الطلب لحد {formatDate(req.expires_at)}</p>}
         {isOpen(req.status) && <CloseForm requestId={req.id} canComplete={req.status === "published" || req.status === "available"} />}
       </div>

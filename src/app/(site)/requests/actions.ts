@@ -8,10 +8,14 @@ import { text, type FormState } from "@/lib/form";
 import { cairoTime, sendTelegram } from "@/lib/notify";
 import { dbError } from "@/lib/errors";
 import { getRegions, regionOptions } from "@/lib/regions";
+import { readPhoto, savePhoto } from "@/lib/photos";
 
 export async function createRequest(_prev: FormState, form: FormData): Promise<FormState> {
   const user = await requireUser("/requests/new");
-  const medicine = text(form.get("medicine_name"), 120);
+  const box = await readPhoto(form.get("box_photo"));
+  const prescription = await readPhoto(form.get("prescription_photo"));
+  // with a photo the name is optional: staff read it and write what pharmacies see
+  const medicine = text(form.get("medicine_name"), 120) || (box || prescription ? "دوا في الصورة" : "");
   const strength = text(form.get("strength"), 60) || null;
   const regionId = String(form.get("region_id") ?? "");
   const area = (regionOptions(await getRegions()).find((r) => r.id === regionId)?.label ?? "").slice(0, 80);
@@ -19,7 +23,11 @@ export async function createRequest(_prev: FormState, form: FormData): Promise<F
   const phoneRaw = text(form.get("contact_phone"), 20).replace(/\D/g, "").replace(/^0+/, "");
   const phone = phoneRaw ? `+20${phoneRaw}`.replace(/^\+2020/, "+20") : null;
 
-  if (medicine.length < 2) return { status: "error", message: "اكتب اسم الدوا أو المادة الفعالة." };
+  if (medicine.length < 2) return { status: "error", message: "اكتب اسم الدوا أو ابعت صورته." };
+  for (const key of ["box_photo", "prescription_photo"]) {
+    const v = form.get(key);
+    if (v instanceof File && v.size > 0 && !(key === "box_photo" ? box : prescription)) return { status: "error", message: "الصورة دي مش هينفع نرفعها. جرّب صورة تانية." };
+  }
   if (area.length < 2) return { status: "error", message: "اختار منطقتك." };
   if (phone && !/^\+[0-9]{8,15}$/.test(phone)) return { status: "error", message: "رقم الموبايل مش مظبوط." };
 
@@ -31,8 +39,11 @@ export async function createRequest(_prev: FormState, form: FormData): Promise<F
     .single();
   if (error || !data) return dbError(error, "مقدرناش نسجّل الطلب. جرّب تاني.");
 
+  const saved = await Promise.all([box && savePhoto(data.id, "box", box), prescription && savePhoto(data.id, "prescription", prescription)]);
+  const photos = [box && (saved[0] ? "صورة العلبة" : "صورة العلبة (فشل الرفع)"), prescription && (saved[1] ? "صورة الروشتة" : "صورة الروشتة (فشل الرفع)")].filter(Boolean);
+
   await sendTelegram(
-    `[طلب دوا جديد]\n\n${medicine}${strength ? ` ${strength}` : ""}\nالمنطقة: ${area}${details ? `\nتفاصيل: ${details}` : ""}${phone ? `\nموبايل: ${phone}` : ""}\nالوقت: ${cairoTime()}`,
+    `[طلب دوا جديد]\n\n${medicine}${strength ? ` ${strength}` : ""}\nالمنطقة: ${area}${details ? `\nتفاصيل: ${details}` : ""}${phone ? `\nموبايل: ${phone}` : ""}${photos.length ? `\nصور: ${photos.join("، ")}` : ""}\nالوقت: ${cairoTime()}`,
   );
   redirect(`/requests/${data.id}`);
 }

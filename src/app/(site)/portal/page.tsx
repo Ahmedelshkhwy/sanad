@@ -8,6 +8,8 @@ import { getRegions, regionOptions } from "@/lib/regions";
 import { formatDate } from "@/lib/format";
 import { PageHeader } from "@/components/ui/Field";
 import { ApplyForm, NoteForm, ProfileForm, RespondForm } from "./PortalForms";
+import { RequestPhotos } from "@/components/RequestPhotos";
+import { signPhotos } from "@/lib/photos";
 
 export const metadata: Metadata = { title: "بوابة الصيدليات" };
 
@@ -33,7 +35,7 @@ const STATUS_NOTE: Record<string, string> = {
   rejected: "طلب الانضمام اترفض. كلّم فريق سَنَد لو محتاج تعرف السبب.",
 };
 
-function Inbox({ items, providerId }: { items: InboxItem[]; providerId: string }) {
+function Inbox({ items, providerId, photos }: { items: InboxItem[]; providerId: string; photos: Map<string, string[]> }) {
   if (!items.length) return <p className="text-muted">مفيش طلبات لسه.</p>;
   return (
     <ul className="grid gap-3">
@@ -51,6 +53,7 @@ function Inbox({ items, providerId }: { items: InboxItem[]; providerId: string }
                 {open && r.expires_at && ` · ينتهي ${formatDate(r.expires_at)}`}
               </p>
               {r.public_note && <p className="whitespace-pre-line text-sm">{r.public_note}</p>}
+              {open && <RequestPhotos photos={(photos.get(r.request_id) ?? []).map((url, i) => ({ key: url, url, label: `صورة العلبة${i ? ` ${i + 1}` : ""}` }))} />}
             </div>
             {open ? (
               <div className="grid content-start gap-3">
@@ -100,14 +103,19 @@ async function Portal({ searchParams }: { searchParams: Promise<{ p?: string }> 
 
   let inbox: InboxItem[] = [];
   let coverage: string[] = [];
+  const photos = new Map<string, string[]>();
   if (provider.status === "verified") {
     await supabase.rpc("expire_requests");
-    const [{ data }, { data: cov }] = await Promise.all([
+    const [{ data }, { data: cov }, { data: photoRows }] = await Promise.all([
       supabase.rpc("provider_inbox", { p_provider: provider.id }),
       supabase.from("provider_regions").select("region_id").eq("provider_id", provider.id),
+      supabase.rpc("provider_photos", { p_provider: provider.id }),
     ]);
     inbox = (data ?? []) as InboxItem[];
     coverage = (cov ?? []).map((c) => c.region_id);
+    const rows = (photoRows ?? []) as { request_id: string; path: string }[];
+    const urls = await signPhotos(rows.map((r) => r.path));
+    for (const r of rows) if (urls.has(r.path)) photos.set(r.request_id, [...(photos.get(r.request_id) ?? []), urls.get(r.path)!]);
   }
   const waiting = inbox.filter((r) => (r.status === "published" || r.status === "available") && !r.response).length;
 
@@ -138,7 +146,7 @@ async function Portal({ searchParams }: { searchParams: Promise<{ p?: string }> 
               طلبات الدوا {waiting > 0 && <span className="text-base font-normal text-muted">· {waiting} مستني ردك</span>}
             </h3>
             <p className="text-sm text-muted">ردك "متوفر" بيبعت لصاحب الطلب إشعار باسم الصيدلية، ويظهر له تليفونها عشان يكلّمكم. ولو الدوا خلص، غيّر ردك.</p>
-            <Inbox items={inbox} providerId={provider.id} />
+            <Inbox items={inbox} providerId={provider.id} photos={photos} />
           </section>
           {current.role === "owner" && (
             <section aria-labelledby="profile" className="grid gap-3 rounded-[20px] border border-line bg-surface p-5">

@@ -14,6 +14,11 @@ export async function reviewRequest(requestId: string, _prev: FormState, form: F
   const decision = String(form.get("decision"));
   const region = String(form.get("region_id") ?? "");
   const supabase = await createClient();
+  const name = text(form.get("medicine_name"), 120);
+  if (decision === "approve" && name.length >= 2) {
+    const { error: renameError } = await supabase.rpc("rename_request", { p_request: requestId, p_name: name, p_strength: text(form.get("strength"), 60) });
+    if (renameError) return dbError(renameError, "مقدرناش نحفظ اسم الدوا.");
+  }
   const { error } = await supabase.rpc("review_request", {
     p_request: requestId,
     p_decision: decision,
@@ -60,4 +65,13 @@ export async function messageRequest(requestId: string, _prev: FormState, form: 
   if (error) return dbError(error, "مقدرناش نبعت الرسالة.");
   revalidatePath("/admin/requests");
   return { status: "ok", message: "اتبعتت للمستخدم." };
+}
+
+/** Staff decide whether a box photo goes to pharmacies (a prescription never does). */
+export async function setPhotoShared(photoId: string, shared: boolean): Promise<void> {
+  await requireStaff("/admin/requests");
+  if (!UUID.test(photoId)) return;
+  const supabase = await createClient();
+  await supabase.from("request_photos").update({ shared }).eq("id", photoId).eq("kind", "box");
+  revalidatePath("/admin/requests");
 }

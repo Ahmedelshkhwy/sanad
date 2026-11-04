@@ -1,20 +1,36 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { createRequest } from "../actions";
 import { Button } from "@/components/ui/Button";
 import { Field, FormMessage, TextArea, TextInput } from "@/components/ui/Field";
 import { RegionSelect } from "@/components/RegionSelect";
+import { PhotoPicker } from "@/components/PhotoPicker";
 import type { RegionOption } from "@/lib/regions";
 import { idle, type FormState } from "@/lib/form";
 
 export function RequestForm({ regions }: { regions: RegionOption[] }) {
   const [state, action, pending] = useActionState<FormState, FormData>(createRequest, idle);
+  const [box, setBox] = useState<Blob | null>(null);
+  const [prescription, setPrescription] = useState<Blob | null>(null);
+  const submit = (form: FormData) => {
+    if (box) form.set("box_photo", box, "box.jpg");
+    if (prescription) form.set("prescription_photo", prescription, "prescription.jpg");
+    return action(form);
+  };
   return (
-    <form action={action} className="grid gap-4">
-      <Field label="اسم الدوا أو المادة الفعالة" hint="زي اللي مكتوب على العلبة أو الروشتة.">
-        <TextInput name="medicine_name" required maxLength={120} />
+    <form action={submit} className="grid gap-4">
+      <Field label="اسم الدوا أو المادة الفعالة" hint={box || prescription ? "اختياري لما تبعت صورة. هنقراه منها." : "زي اللي مكتوب على العلبة أو الروشتة."}>
+        <TextInput name="medicine_name" required={!box && !prescription} maxLength={120} />
       </Field>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <PhotoPicker label="صورة علبة الدوا" hint="اختياري. هتوصل للصيدليات عشان يعرفوا الدوا بالظبط." onChange={setBox} />
+        <PhotoPicker
+          label="صورة الروشتة"
+          hint="اختياري. فريق سَنَد بس اللي هيشوفها، ومش هتوصل للصيدليات. الصيدلية هتطلب الروشتة الأصلية وقت الصرف."
+          onChange={setPrescription}
+        />
+      </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="التركيز" hint="لو تعرفه، زي ٥٠ ميكروجرام.">
           <TextInput name="strength" maxLength={60} />

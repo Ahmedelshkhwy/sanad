@@ -13,17 +13,29 @@ const small = "!min-h-10 text-sm";
 export function ReviewForm({
   requestId,
   publicNote,
+  name,
+  strength,
   region,
   regions,
 }: {
   requestId: string;
   publicNote: string;
+  name: string;
+  strength: string;
   region: string | null;
   regions: RegionOption[];
 }) {
   const [state, action, pending] = useActionState<FormState, FormData>(reviewRequest.bind(null, requestId), idle);
   return (
     <form action={action} className="grid gap-2">
+      <div className="grid gap-2 sm:grid-cols-[2fr_1fr]">
+        <Field label="اسم الدوا" hint="صحّحه من الصورة لو محتاج.">
+          <input name="medicine_name" required minLength={2} maxLength={120} defaultValue={name} className={inputClass} />
+        </Field>
+        <Field label="التركيز">
+          <input name="strength" maxLength={60} defaultValue={strength} className={inputClass} />
+        </Field>
+      </div>
       <Field label="المنطقة">
         <RegionSelect options={regions} defaultValue={region} />
       </Field>
@@ -38,7 +50,7 @@ export function ReviewForm({
         <Button type="submit" name="decision" value="approve" disabled={pending} className={small}>
           وافق
         </Button>
-        <Button type="submit" name="decision" value="reject" variant="ghost" disabled={pending} className={small}>
+        <Button type="submit" name="decision" value="reject" variant="ghost" formNoValidate disabled={pending} className={small}>
           ارفض
         </Button>
       </div>
