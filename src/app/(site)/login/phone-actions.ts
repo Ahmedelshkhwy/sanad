@@ -19,7 +19,8 @@ async function signIn(phone: string, pin: string): Promise<boolean> {
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword({ email: phoneEmail(phone), password: pinPassword(phone, pin) });
   if (error) {
-    await supabase.rpc("pin_failed", { p_phone: phone });
+    // only the service role may count failures, so nobody can lock a number from outside
+    await createAdminClient().rpc("pin_failed", { p_phone: phone });
     return false;
   }
   await supabase.rpc("pin_succeeded", { p_phone: phone });
@@ -32,8 +33,7 @@ export async function phoneSignIn(_prev: AuthState, form: FormData): Promise<Aut
   if (!phone) return { status: "error", message: "رقم الموبايل مش مظبوط." };
   if (!pin) return { status: "error", message: "الرقم السري ٥ خانات." };
 
-  const supabase = await createClient();
-  const { data: allowed } = await supabase.rpc("pin_allowed", { p_phone: phone });
+  const { data: allowed } = await createAdminClient().rpc("pin_allowed", { p_phone: phone });
   if (allowed === false) return { status: "error", message: LOCKED };
 
   if (!(await signIn(phone, pin))) return { status: "error", message: "الرقم أو الرقم السري غلط." };

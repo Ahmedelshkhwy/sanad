@@ -2,6 +2,7 @@
 
 import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { normalizePin, phoneEmail, pinPassword } from "@/lib/pin";
 import type { FormState } from "@/lib/form";
 
@@ -18,13 +19,14 @@ export async function changePin(_prev: FormState, form: FormData): Promise<FormS
   const { data: profile } = await supabase.from("profiles").select("phone").eq("id", claims?.claims?.sub ?? "").single();
   if (!profile?.phone) return { status: "error", message: "حسابك مش برقم موبايل." };
 
-  const { data: allowed } = await supabase.rpc("pin_allowed", { p_phone: profile.phone });
+  const admin = createAdminClient();
+  const { data: allowed } = await admin.rpc("pin_allowed", { p_phone: profile.phone });
   if (allowed === false) return { status: "error", message: "محاولات كتير غلط. استنى ربع ساعة." };
 
   // confirm the current PIN before replacing it
   const { error: wrong } = await supabase.auth.signInWithPassword({ email: phoneEmail(profile.phone), password: pinPassword(profile.phone, current) });
   if (wrong) {
-    await supabase.rpc("pin_failed", { p_phone: profile.phone });
+    await admin.rpc("pin_failed", { p_phone: profile.phone });
     return { status: "error", message: "الرقم السري الحالي غلط." };
   }
   const { error } = await supabase.auth.updateUser({ password: pinPassword(profile.phone, next) });
