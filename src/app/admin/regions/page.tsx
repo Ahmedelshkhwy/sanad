@@ -49,19 +49,34 @@ async function Regions() {
             ))}
           </select>
         </label>
-        <label className="grid gap-1 text-sm">
-          تابعة لـ
-          <RegionSelect options={options} placeholder="ولا حاجة (محافظة)" />
-        </label>
+        <div className="text-sm">
+          <RegionSelect regions={regions} requireCity={false} />
+          <span className="text-xs text-muted">سيبها فاضية لو بتضيف محافظة.</span>
+        </div>
         <button className="rounded-full bg-green px-5 py-2.5 text-on-green">إضافة</button>
       </form>
-      <ul className="grid gap-1">
-        {options.map((o) => (
-          <li key={o.id} className="flex items-center gap-2 rounded-xl border border-line bg-surface px-4 py-2" style={{ marginInlineStart: `${o.depth * 1.5}rem` }}>
-            <b className="font-medium">{byId.get(o.id)?.name}</b>
-            <span className="text-sm text-muted">{REGION_KIND[byId.get(o.id)!.kind]}</span>
-          </li>
-        ))}
+      <ul className="grid gap-2">
+        {options
+          .filter((o) => o.depth === 0)
+          .map((g) => {
+            const under = options.filter((o) => o.depth > 0 && o.label.endsWith(`، ${byId.get(g.id)?.name}`));
+            return (
+              <li key={g.id}>
+                <details className="rounded-xl border border-line bg-surface px-4 py-2">
+                  <summary className="cursor-pointer">
+                    <b className="font-medium">{byId.get(g.id)?.name}</b> <span className="text-sm text-muted">· {under.length}</span>
+                  </summary>
+                  <ul className="mt-2 grid gap-1 text-sm">
+                    {under.map((o) => (
+                      <li key={o.id} style={{ marginInlineStart: `${(o.depth - 1) * 1.5}rem` }}>
+                        {byId.get(o.id)?.name} <span className="text-muted">· {REGION_KIND[byId.get(o.id)!.kind]}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              </li>
+            );
+          })}
       </ul>
     </div>
   );

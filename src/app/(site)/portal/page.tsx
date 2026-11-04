@@ -4,7 +4,7 @@ import { Suspense } from "react";
 import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { PROVIDER_STATUS } from "@/lib/providers";
-import { getRegions, regionOptions } from "@/lib/regions";
+import { getRegions } from "@/lib/regions";
 import { formatDate } from "@/lib/format";
 import { PageHeader } from "@/components/ui/Field";
 import { ApplyForm, NoteForm, ProfileForm, RespondForm } from "./PortalForms";
@@ -84,7 +84,7 @@ async function Portal({ searchParams }: { searchParams: Promise<{ p?: string }> 
   const supabase = await createClient();
   const [{ data: rows }, regions] = await Promise.all([
     supabase.from("provider_members").select("role, providers(id, name, status, address, phone, whatsapp)").eq("user_id", user.id),
-    getRegions().then(regionOptions),
+    getRegions(),
   ]);
   const memberships = ((rows ?? []) as unknown as Membership[]).filter((m) => m.providers);
 

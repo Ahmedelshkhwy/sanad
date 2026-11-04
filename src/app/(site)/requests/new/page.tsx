@@ -2,14 +2,14 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { requireUser } from "@/lib/auth";
 import { RequestForm } from "./RequestForm";
-import { getRegions, regionOptions } from "@/lib/regions";
+import { getRegions } from "@/lib/regions";
 import { PageHeader } from "@/components/ui/Field";
 
 export const metadata: Metadata = { title: "طلب دوا" };
 
 async function Form() {
   await requireUser("/requests/new");
-  return <RequestForm regions={regionOptions(await getRegions())} />;
+  return <RequestForm regions={await getRegions()} />;
 }
 
 export default function NewRequestPage() {

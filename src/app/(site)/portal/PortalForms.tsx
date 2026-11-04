@@ -5,20 +5,18 @@ import { applyProvider, respond, saveMyProvider, sendNote } from "./actions";
 import { Button } from "@/components/ui/Button";
 import { Field, FormMessage, TextInput } from "@/components/ui/Field";
 import { RegionChecks, RegionSelect } from "@/components/RegionSelect";
-import type { RegionOption } from "@/lib/regions";
+import type { Region } from "@/lib/regions";
 import { idle, type FormState } from "@/lib/form";
 
-export function ApplyForm({ regions }: { regions: RegionOption[] }) {
+export function ApplyForm({ regions }: { regions: Region[] }) {
   const [state, action, pending] = useActionState<FormState, FormData>(applyProvider, idle);
   return (
     <form action={action} className="grid gap-4">
       <Field label="اسم الصيدلية">
         <TextInput name="name" required maxLength={120} />
       </Field>
+      <RegionSelect regions={regions} required />
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="المنطقة">
-          <RegionSelect options={regions} required />
-        </Field>
         <Field label="العنوان">
           <TextInput name="address" maxLength={200} />
         </Field>
@@ -73,7 +71,7 @@ export function ProfileForm({
   phone: string | null;
   whatsapp: string | null;
   coverage: string[];
-  regions: RegionOption[];
+  regions: Region[];
 }) {
   const [state, action, pending] = useActionState<FormState, FormData>(saveMyProvider.bind(null, providerId), idle);
   return (
@@ -91,7 +89,7 @@ export function ProfileForm({
       </div>
       <div className="grid gap-1.5">
         <span className="text-sm font-medium">المناطق اللي بتخدمها</span>
-        <RegionChecks options={regions} selected={coverage} />
+        <RegionChecks regions={regions} selected={coverage} />
       </div>
       <FormMessage state={state} />
       <div>

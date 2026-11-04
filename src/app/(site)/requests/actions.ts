@@ -18,7 +18,9 @@ export async function createRequest(_prev: FormState, form: FormData): Promise<F
   const medicine = text(form.get("medicine_name"), 120) || (box || prescription ? "دوا في الصورة" : "");
   const strength = text(form.get("strength"), 60) || null;
   const regionId = String(form.get("region_id") ?? "");
-  const area = (regionOptions(await getRegions()).find((r) => r.id === regionId)?.label ?? "").slice(0, 80);
+  const locality = text(form.get("locality"), 80);
+  const region = regionOptions(await getRegions()).find((r) => r.id === regionId)?.label ?? "";
+  const area = (region && [locality, region].filter(Boolean).join("، ")).slice(0, 80);
   const details = text(form.get("details"), 1000);
   const phoneRaw = text(form.get("contact_phone"), 20).replace(/\D/g, "").replace(/^0+/, "");
   const phone = phoneRaw ? `+20${phoneRaw}`.replace(/^\+2020/, "+20") : null;
@@ -28,13 +30,14 @@ export async function createRequest(_prev: FormState, form: FormData): Promise<F
     const v = form.get(key);
     if (v instanceof File && v.size > 0 && !(key === "box_photo" ? box : prescription)) return { status: "error", message: "الصورة دي مش هينفع نرفعها. جرّب صورة تانية." };
   }
-  if (area.length < 2) return { status: "error", message: "اختار منطقتك." };
+  if (!region) return { status: "error", message: "اختار المحافظة والمدينة." };
+  if (locality.length < 2) return { status: "error", message: "اكتب القرية أو الحي." };
   if (phone && !/^\+[0-9]{8,15}$/.test(phone)) return { status: "error", message: "رقم الموبايل مش مظبوط." };
 
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("help_requests")
-    .insert({ user_id: user.id, kind: "medicine", medicine_name: medicine, strength, area, region_id: regionId, details, contact_phone: phone })
+    .insert({ user_id: user.id, kind: "medicine", medicine_name: medicine, strength, area, region_id: regionId, locality, details, contact_phone: phone })
     .select("id")
     .single();
   if (error || !data) return dbError(error, "مقدرناش نسجّل الطلب. جرّب تاني.");

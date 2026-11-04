@@ -4,7 +4,7 @@ import { requireStaff } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { StatusBadge } from "@/components/StatusBadge";
 import { OPEN_STATUSES, STATUSES, STATUS_LABEL, isStatus } from "@/lib/requests";
-import { getRegions, regionOptions } from "@/lib/regions";
+import { getRegions } from "@/lib/regions";
 import { formatDate } from "@/lib/format";
 import { after } from "next/server";
 import { FinishForm, MessageForm, PublishForm, ReviewForm } from "./RequestForms";
@@ -64,7 +64,7 @@ async function Requests({ searchParams }: { searchParams: Promise<{ status?: str
   const [{ data }, { data: pharmacies }, regions] = await Promise.all([
     q,
     supabase.from("providers").select("id, name, area").eq("kind", "pharmacy").eq("status", "verified").eq("active", true).order("name"),
-    getRegions().then(regionOptions),
+    getRegions(),
   ]);
   const ids = (data ?? []).map((r) => r.id);
   const [{ data: targetRows }, { data: photoRows }] = ids.length

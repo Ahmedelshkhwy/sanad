@@ -23,10 +23,10 @@ async function Providers() {
       .order("name"),
     supabase.from("provider_regions").select("provider_id, region_id"),
     supabase.from("provider_members").select("provider_id, role, profiles(display_name, phone)"),
-    getRegions().then(regionOptions),
+    getRegions(),
   ]);
   const members = (memberRows ?? []) as unknown as Member[];
-  const label = new Map(regions.map((r) => [r.id, r.label]));
+  const label = new Map(regionOptions(regions).map((r) => [r.id, r.label]));
   // applications waiting for a decision first
   const rows = [...(data ?? [])].sort((a, b) => Number(b.status === "pending") - Number(a.status === "pending"));
 

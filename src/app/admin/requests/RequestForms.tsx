@@ -5,7 +5,7 @@ import { finishRequest, messageRequest, publishRequest, reviewRequest } from "./
 import { Button } from "@/components/ui/Button";
 import { Field, FormMessage, TextArea, inputClass } from "@/components/ui/Field";
 import { RegionSelect } from "@/components/RegionSelect";
-import type { RegionOption } from "@/lib/regions";
+import type { Region } from "@/lib/regions";
 import { idle, type FormState } from "@/lib/form";
 
 const small = "!min-h-10 text-sm";
@@ -23,7 +23,7 @@ export function ReviewForm({
   name: string;
   strength: string;
   region: string | null;
-  regions: RegionOption[];
+  regions: Region[];
 }) {
   const [state, action, pending] = useActionState<FormState, FormData>(reviewRequest.bind(null, requestId), idle);
   return (
@@ -36,9 +36,7 @@ export function ReviewForm({
           <input name="strength" maxLength={60} defaultValue={strength} className={inputClass} />
         </Field>
       </div>
-      <Field label="المنطقة">
-        <RegionSelect options={regions} defaultValue={region} />
-      </Field>
+      <RegionSelect regions={regions} defaultValue={region} />
       <Field label="اللي هتشوفه الصيدليات" hint="من غير اسم المريض أو رقمه.">
         <TextArea name="public_note" rows={2} maxLength={500} defaultValue={publicNote} />
       </Field>

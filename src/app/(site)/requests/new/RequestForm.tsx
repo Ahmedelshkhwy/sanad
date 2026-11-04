@@ -6,10 +6,10 @@ import { Button } from "@/components/ui/Button";
 import { Field, FormMessage, TextArea, TextInput } from "@/components/ui/Field";
 import { RegionSelect } from "@/components/RegionSelect";
 import { PhotoPicker } from "@/components/PhotoPicker";
-import type { RegionOption } from "@/lib/regions";
+import type { Region } from "@/lib/regions";
 import { idle, type FormState } from "@/lib/form";
 
-export function RequestForm({ regions }: { regions: RegionOption[] }) {
+export function RequestForm({ regions }: { regions: Region[] }) {
   const [state, action, pending] = useActionState<FormState, FormData>(createRequest, idle);
   const [box, setBox] = useState<Blob | null>(null);
   const [prescription, setPrescription] = useState<Blob | null>(null);
@@ -35,10 +35,11 @@ export function RequestForm({ regions }: { regions: RegionOption[] }) {
         <Field label="التركيز" hint="لو تعرفه، زي ٥٠ ميكروجرام.">
           <TextInput name="strength" maxLength={60} />
         </Field>
-        <Field label="القرية أو المدينة">
-          <RegionSelect options={regions} required />
-        </Field>
       </div>
+      <RegionSelect regions={regions} required />
+      <Field label="القرية أو الحي" hint="عشان نبعت الطلب لأقرب صيدليات ليك.">
+        <TextInput name="locality" required minLength={2} maxLength={80} />
+      </Field>
       <Field label="رقم موبايل للتواصل" hint="اختياري. هيظهر لفريق سَنَد بس، مش للصيدليات.">
         <div className="flex gap-1.5" dir="ltr">
           <span className="grid place-items-center rounded-xl border-[1.5px] border-line px-3 text-muted">+20</span>

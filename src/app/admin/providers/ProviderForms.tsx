@@ -6,12 +6,12 @@ import { Button } from "@/components/ui/Button";
 import { Field, FormMessage, TextInput, inputClass } from "@/components/ui/Field";
 import { RegionChecks, RegionSelect } from "@/components/RegionSelect";
 import { KIND } from "@/lib/providers";
-import type { RegionOption } from "@/lib/regions";
+import type { Region } from "@/lib/regions";
 import { idle, type FormState } from "@/lib/form";
 
 const small = "!min-h-10 text-sm";
 
-export function AddProviderForm({ regions }: { regions: RegionOption[] }) {
+export function AddProviderForm({ regions }: { regions: Region[] }) {
   const [state, action, pending] = useActionState<FormState, FormData>(addProvider, idle);
   return (
     <form action={action} className="grid gap-3 rounded-2xl border border-line bg-surface p-4 md:grid-cols-3">
@@ -27,9 +27,7 @@ export function AddProviderForm({ regions }: { regions: RegionOption[] }) {
           ))}
         </select>
       </Field>
-      <Field label="المنطقة">
-        <RegionSelect options={regions} />
-      </Field>
+      <RegionSelect regions={regions} />
       <Field label="العنوان">
         <TextInput name="address" maxLength={200} />
       </Field>
@@ -78,7 +76,7 @@ export function EditProviderForm({
   phone: string | null;
   whatsapp: string | null;
   coverage: string[];
-  regions: RegionOption[];
+  regions: Region[];
 }) {
   const [state, action, pending] = useActionState<FormState, FormData>(saveProvider.bind(null, providerId), idle);
   return (
@@ -89,7 +87,7 @@ export function EditProviderForm({
         <TextInput name="whatsapp" defaultValue={whatsapp ?? ""} inputMode="tel" dir="ltr" maxLength={20} placeholder="واتساب" aria-label="واتساب" />
       </div>
       <span className="text-sm font-medium">المناطق اللي بتغطيها</span>
-      <RegionChecks options={regions} selected={coverage} />
+      <RegionChecks regions={regions} selected={coverage} />
       <FormMessage state={state} />
       <Button type="submit" disabled={pending} variant="ghost" className={`justify-self-start ${small}`}>
         احفظ
